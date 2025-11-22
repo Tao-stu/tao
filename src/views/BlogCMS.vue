@@ -270,6 +270,36 @@
                 </div>
               </div>
 
+              <!-- 数据备份 -->
+              <div class="border-t pt-6" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
+                <h3 class="text-xl font-semibold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
+                  💾 数据备份
+                </h3>
+                <p class="mb-4 text-sm" :class="isDark ? 'text-gray-300' : 'text-gray-600'">
+                  备份所有文章和留言数据，下载为JSON文件
+                </p>
+                <button 
+                  @click="handleBackup"
+                  :disabled="isBackingUp"
+                  class="px-6 py-3 rounded-lg font-medium transition-all duration-300 disabled:opacity-50"
+                  :class="isDark 
+                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'"
+                >
+                  {{ isBackingUp ? '备份中...' : '📥 下载数据备份' }}
+                </button>
+                
+                <!-- 备份错误信息 -->
+                <div v-if="backupError" class="mt-4 p-3 rounded-lg border border-red-300 bg-red-50 text-red-600">
+                  {{ backupError }}
+                </div>
+                
+                <!-- 备份成功信息 -->
+                <div v-if="backupSuccess" class="mt-4 p-3 rounded-lg border border-green-300 bg-green-50 text-green-600">
+                  {{ backupSuccess }}
+                </div>
+              </div>
+
               <!-- 系统信息 -->
               <div class="border-t pt-6" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
                 <h3 class="text-xl font-semibold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
@@ -328,6 +358,11 @@ const passwordForm = ref({
 const isChangingPassword = ref(false)
 const passwordError = ref('')
 const passwordSuccess = ref('')
+
+// 备份相关
+const isBackingUp = ref(false)
+const backupError = ref('')
+const backupSuccess = ref('')
 
 // 获取认证token
 const getAuthToken = () => {
@@ -577,6 +612,57 @@ const handleChangePassword = async () => {
     passwordError.value = error.response?.data?.error || error.message || '修改密码失败，请稍后重试'
   } finally {
     isChangingPassword.value = false
+  }
+}
+
+// 处理数据备份
+const handleBackup = async () => {
+  try {
+    isBackingUp.value = true
+    backupError.value = ''
+    backupSuccess.value = ''
+    
+    // 调用备份API
+    const response = await axios.get(`${API_BASE}/backup`, {
+      headers: createAuthHeaders(),
+      responseType: 'blob' // 重要：设置响应类型为blob以处理文件下载
+    })
+    
+    // 创建下载链接
+    const blob = new Blob([response.data], { type: 'application/json' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    
+    // 从响应头获取文件名，如果没有则使用默认名称
+    const contentDisposition = response.headers['content-disposition']
+    let filename = `backup_${new Date().toISOString().split('T')[0]}.json`
+    
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '')
+      }
+    }
+    
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    backupSuccess.value = `数据备份成功！文件已下载为 ${filename}`
+    
+    // 3秒后清除成功消息
+    setTimeout(() => {
+      backupSuccess.value = ''
+    }, 3000)
+    
+  } catch (error) {
+    console.error('备份失败:', error)
+    backupError.value = error.response?.data?.error || error.message || '备份失败，请稍后重试'
+  } finally {
+    isBackingUp.value = false
   }
 }
 </script>
