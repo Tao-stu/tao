@@ -46,27 +46,13 @@
         </div>
       </div>
 
-      <!-- 密码验证 -->
-      <ArticlePasswordGate 
-        v-else-if="article && article.is_encrypted && !isAuthenticated"
-        :article-id="article.id"
-        :article-slug="article.slug"
-        @authenticated="handleAuthenticated"
-      />
+
 
       <!-- 文章内容 -->
-      <article v-else-if="article" class="max-w-4xl mx-auto">
+      <article v-if="article" class="max-w-4xl mx-auto">
         <div class="glass-effect rounded-3xl p-8 md:p-12">
           <!-- 文章头部 -->
           <header class="mb-8">
-            <!-- 加密标识 -->
-            <div v-if="article.is_encrypted" class="flex items-center gap-2 mb-4">
-              <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
-              </svg>
-              <span class="text-sm font-medium text-amber-500">加密文章</span>
-            </div>
-
             <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-tokyo-night-cyan">
               {{ article.title }}
             </h1>
@@ -128,7 +114,6 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDark } from '@vueuse/core'
-import ArticlePasswordGate from '../components/ArticlePasswordGate.vue'
 
 // 响应式数据
 const isDark = useDark()
@@ -136,7 +121,6 @@ const route = useRoute()
 const loading = ref(true)
 const error = ref('')
 const article = ref(null)
-const isAuthenticated = ref(false)
 
 // 获取文章数据
 const fetchArticle = async () => {
@@ -149,16 +133,6 @@ const fetchArticle = async () => {
 
     if (data.success && data.data) {
       article.value = data.data
-      
-      // 检查是否已经验证过密码
-      if (article.value.is_encrypted) {
-        const hasAccess = sessionStorage.getItem(`article_${article.value.id}_access`)
-        if (hasAccess === 'true') {
-          isAuthenticated.value = true
-        }
-      } else {
-        isAuthenticated.value = true
-      }
     } else {
       error.value = data.error || '文章不存在'
     }
@@ -170,24 +144,7 @@ const fetchArticle = async () => {
   }
 }
 
-// 处理密码验证成功
-const handleAuthenticated = async () => {
-  // 获取完整文章内容
-  try {
-    const response = await fetch(`/api/posts/${route.params.slug}/content`)
-    const data = await response.json()
 
-    if (data.success && data.data) {
-      article.value = data.data
-      isAuthenticated.value = true
-    } else {
-      error.value = data.error || '获取文章内容失败'
-    }
-  } catch (err) {
-    console.error('获取完整文章失败:', err)
-    error.value = '获取文章内容失败，请稍后重试'
-  }
-}
 
 // 格式化日期
 const formatDate = (dateString) => {

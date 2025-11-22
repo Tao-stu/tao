@@ -57,37 +57,20 @@
         />
       </div>
 
-      <!-- 可选字段和加密设置 -->
+      <!-- 可选字段 -->
       <div class="space-y-4">
-        <!-- 选项标题行 -->
-        <div class="flex items-center gap-6">
-          <!-- 可选字段 -->
-          <div class="flex items-center gap-3">
-            <input 
-              type="checkbox" 
-              id="showOptionalFields"
-              v-model="showOptionalFields"
-              class="w-4 h-4 text-tokyo-night-blue rounded focus:ring-tokyo-night-blue"
-            />
-            <label for="showOptionalFields" class="text-sm font-medium transition-colors cursor-pointer"
-                   :class="isDark ? 'text-white' : 'text-gray-800'">
-              可选字段（别名、地点、封面图）
-            </label>
-          </div>
-          
-          <!-- 文章加密 -->
-          <div class="flex items-center gap-3">
-            <input 
-              type="checkbox" 
-              id="showPasswordFields"
-              v-model="showPasswordFields"
-              class="w-4 h-4 text-tokyo-night-blue rounded focus:ring-tokyo-night-blue"
-            />
-            <label for="showPasswordFields" class="text-sm font-medium transition-colors cursor-pointer"
-                   :class="isDark ? 'text-white' : 'text-gray-800'">
-              文章加密
-            </label>
-          </div>
+        <!-- 可选字段开关 -->
+        <div class="flex items-center gap-3">
+          <input 
+            type="checkbox" 
+            id="showOptionalFields"
+            v-model="showOptionalFields"
+            class="w-4 h-4 text-tokyo-night-blue rounded focus:ring-tokyo-night-blue"
+          />
+          <label for="showOptionalFields" class="text-sm font-medium transition-colors cursor-pointer"
+                 :class="isDark ? 'text-white' : 'text-gray-800'">
+            可选字段（别名、地点、封面图）
+          </label>
         </div>
 
         <!-- 可选字段内容 -->
@@ -182,41 +165,7 @@
         </div>
       </div>
 
-      <!-- 文章加密内容 -->
-      <div v-if="showPasswordFields" class="space-y-4 pl-7 border-l-2 border-tokyo-night-blue/20">
-        <!-- 访问密码 -->
-        <div>
-          <label class="block text-sm font-medium mb-2 transition-colors" 
-                 :class="isDark ? 'text-white' : 'text-gray-800'">
-            访问密码
-          </label>
-          <div class="flex gap-2">
-            <input 
-              type="password" 
-              v-model="formData.access_password"
-              placeholder="输入访问密码（留空则不加密）"
-              class="flex-1 px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              :class="isDark 
-                ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-            />
-            <button 
-              type="button"
-              @click="generateRandomPassword"
-              class="px-4 py-3 rounded-lg font-medium transition-all"
-              :class="isDark 
-                ? 'bg-tokyo-night-blue text-white hover:bg-tokyo-night-blue0' 
-                : 'bg-blue-600 text-white hover:bg-blue-700'"
-            >
-              生成随机密码
-            </button>
-          </div>
-          <p class="text-xs mt-2 transition-colors"
-             :class="isDark ? 'text-gray-400' : 'text-gray-600'">
-            提示：设置密码后文章将需要密码才能访问
-          </p>
-        </div>
-      </div>
+
 
       <!-- 编辑器工具栏 -->
       <div class="border rounded-t-lg transition-colors" 
@@ -298,7 +247,6 @@ const emit = defineEmits(['save', 'cancel'])
 
 // 响应式数据
 const showOptionalFields = ref(false)
-const showPasswordFields = ref(false)
 const formData = ref({
   title: '',
   slug: '',
@@ -307,9 +255,7 @@ const formData = ref({
   location: '',
   cover: '',
   tags: [],
-  status: 'draft',
-  is_encrypted: false,
-  access_password: ''
+  status: 'draft'
 })
 
 const tagsInput = ref('')
@@ -375,13 +321,10 @@ watch(() => props.post, (newPost) => {
       location: newPost.location || '',
       cover: newPost.cover || '',
       tags: Array.isArray(newPost.tags) ? [...newPost.tags] : [],
-      status: newPost.status || 'draft',
-      is_encrypted: newPost.is_encrypted || false,
-      access_password: newPost.access_password || ''
+      status: newPost.status || 'draft'
     }
     tagsInput.value = formData.value.tags.join(', ')
     showOptionalFields.value = !!(newPost.slug || newPost.location || newPost.cover)
-    showPasswordFields.value = newPost.is_encrypted || false
   } else {
     resetForm()
   }
@@ -404,24 +347,13 @@ const resetForm = () => {
     location: '',
     cover: '',
     tags: [],
-    status: 'draft',
-    is_encrypted: false,
-    access_password: ''
+    status: 'draft'
   }
   tagsInput.value = ''
   showOptionalFields.value = false
-  showPasswordFields.value = false
 }
 
-// 生成随机密码
-const generateRandomPassword = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let password = ''
-  for (let i = 0; i < 8; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  formData.value.access_password = password
-}
+
 
 const insertMarkdown = (markdown) => {
   const textarea = document.querySelector('textarea')
@@ -451,8 +383,6 @@ const generateSlug = (title) => {
 
 const saveDraft = () => {
   const data = { ...formData.value, status: 'draft' }
-  // 自动设置加密状态
-  data.is_encrypted = !!data.access_password
   if (!data.slug && data.title) {
     data.slug = generateSlug(data.title)
   }
@@ -461,8 +391,6 @@ const saveDraft = () => {
 
 const publish = () => {
   const data = { ...formData.value, status: 'published' }
-  // 自动设置加密状态
-  data.is_encrypted = !!data.access_password
   if (!data.slug && data.title) {
     data.slug = generateSlug(data.title)
   }
