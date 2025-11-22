@@ -22,6 +22,11 @@ export default async function handler(req, res) {
   }
 
   try {
+    // 使用统一的数据库连接工具
+    const { getDatabaseClient } = await import('../utils/db.js');
+    const db = await getDatabaseClient();
+    const sql = db.sql;
+
     // GET - 获取备份数据
     if (req.method === 'GET') {
       const { type } = req.query; // 'posts', 'messages', 或 'all'
@@ -30,26 +35,32 @@ export default async function handler(req, res) {
       const timestamp = new Date().toISOString();
       
       if (type === 'posts' || type === 'all') {
-        // 获取文章数据
-        const postsResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/posts`, {
-          headers: { 'Authorization': req.headers.authorization }
-        });
-        const postsResult = await postsResponse.json();
-        
-        if (postsResult.success) {
-          backupData.posts = postsResult.data;
+        // 直接从数据库获取文章数据
+        try {
+          const { rows: posts } = await sql`
+            SELECT id, slug, title, summary, content, tags, status, is_encrypted, access_password, created_at, updated_at
+            FROM posts
+            ORDER BY created_at DESC
+          `;
+          backupData.posts = posts;
+        } catch (error) {
+          console.error('Error backing up posts:', error);
+          backupData.posts = [];
         }
       }
       
       if (type === 'messages' || type === 'all') {
-        // 获取留言数据
-        const messagesResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/messages`, {
-          headers: { 'Authorization': req.headers.authorization }
-        });
-        const messagesResult = await messagesResponse.json();
-        
-        if (messagesResult.success) {
-          backupData.messages = messagesResult.data;
+        // 直接从数据库获取留言数据
+        try {
+          const { rows: messages } = await sql`
+            SELECT id, name, content, website, avatar, timestamp
+            FROM messages
+            ORDER BY timestamp DESC
+          `;
+          backupData.messages = messages;
+        } catch (error) {
+          console.error('Error backing up messages:', error);
+          backupData.messages = [];
         }
       }
       
@@ -85,47 +96,35 @@ export default async function handler(req, res) {
           for (const post of backupData.posts) {
             try {
               // 检查文章是否已存在（通过slug）
-              const existingResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/posts?slug=${post.slug}`, {
-                headers: { 'Authorization': req.headers.authorization }
-              });
-              const existingResult = await existingResponse.json();
+              const { rows: existingPosts } = await sql`
+                SELECT id FROM posts WHERE slug = ${post.slug}
+              `;
               
               let postResult;
-              if (existingResult.success && existingResult.data) {
+              if (existingPosts.length > 0) {
                 // 更新现有文章
-                const updateResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/posts`, {
-                  method: 'PUT',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': req.headers.authorization
-                  },
-                  body: JSON.stringify({
-                    id: existingResult.data.id,
-                    slug: post.slug,
-                    title: post.title,
-                    content: post.content,
-                    tags: post.tags || [],
-                    status: post.status || 'draft'
-                  })
-                });
-                postResult = await updateResponse.json();
+                const { rows: updatedPost } = await sql`
+                  UPDATE posts 
+                  SET title = ${post.title}, 
+                      summary = ${post.summary || ''}, 
+                      content = ${post.content}, 
+                      tags = ${post.tags || []}, 
+                      status = ${post.status || 'draft'},
+                      is_encrypted = ${post.is_encrypted || false},
+                      access_password = ${post.access_password || ''},
+                      updated_at = CURRENT_TIMESTAMP
+                  WHERE id = ${existingPosts[0].id}
+                  RETURNING *
+                `;
+                postResult = { success: true, data: updatedPost[0] };
               } else {
                 // 创建新文章
-                const createResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/posts`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': req.headers.authorization
-                  },
-                  body: JSON.stringify({
-                    slug: post.slug,
-                    title: post.title,
-                    content: post.content,
-                    tags: post.tags || [],
-                    status: post.status || 'draft'
-                  })
-                });
-                postResult = await createResponse.json();
+                const { rows: newPost } = await sql`
+                  INSERT INTO posts (slug, title, summary, content, tags, status, is_encrypted, access_password, created_at, updated_at)
+                  VALUES (${post.slug}, ${post.title}, ${post.summary || ''}, ${post.content}, ${post.tags || []}, ${post.status || 'draft'}, ${post.is_encrypted || false}, ${post.access_password || ''}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                  RETURNING *
+                `;
+                postResult = { success: true, data: newPost[0] };
               }
               
               postsResults.push({
@@ -153,26 +152,16 @@ export default async function handler(req, res) {
           
           for (const message of backupData.messages) {
             try {
-              const createResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/messages`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': req.headers.authorization
-                },
-                body: JSON.stringify({
-                  name: message.name,
-                  content: message.content,
-                  website: message.website || '',
-                  avatar: message.avatar || '',
-                  timestamp: message.timestamp || new Date().toISOString()
-                })
-              });
+              const { rows: newMessage } = await sql`
+                INSERT INTO messages (name, content, website, avatar, timestamp)
+                VALUES (${message.name}, ${message.content}, ${message.website || ''}, ${message.avatar || ''}, ${message.timestamp || new Date().toISOString()})
+                RETURNING *
+              `;
               
-              const messageResult = await createResponse.json();
               messagesResults.push({
                 name: message.name,
-                success: messageResult.success,
-                error: messageResult.error || null
+                success: true,
+                error: null
               });
             } catch (error) {
               messagesResults.push({
