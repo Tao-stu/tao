@@ -171,8 +171,22 @@ const fetchArticle = async () => {
 }
 
 // 处理密码验证成功
-const handleAuthenticated = () => {
-  isAuthenticated.value = true
+const handleAuthenticated = async () => {
+  // 获取完整文章内容
+  try {
+    const response = await fetch(`/api/posts/${route.params.slug}/content`)
+    const data = await response.json()
+
+    if (data.success && data.data) {
+      article.value = data.data
+      isAuthenticated.value = true
+    } else {
+      error.value = data.error || '获取文章内容失败'
+    }
+  } catch (err) {
+    console.error('获取完整文章失败:', err)
+    error.value = '获取文章内容失败，请稍后重试'
+  }
 }
 
 // 格式化日期

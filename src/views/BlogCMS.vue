@@ -50,7 +50,7 @@
         <!-- 左侧菜单 - 紧凑型 -->
         <div class="w-48 flex-shrink-0 fixed left-0 top-20 h-screen z-10">
           <div class="glass-effect rounded-r-2xl p-3 h-full">
-            <h2 class="text-lg font-bold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
+            <h2 class="text-xl font-bold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
               管理菜单
             </h2>
             <nav class="space-y-1">
@@ -61,7 +61,7 @@
                   ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
               >
-                📝 文章管理
+                📝 文章
               </button>
               <button
                 @click="activeTab = 'guestbook'"
@@ -70,7 +70,7 @@
                   ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
               >
-                💬 留言管理
+                💬 留言
               </button>
               <button
                 @click="activeTab = 'backup'"
@@ -79,7 +79,7 @@
                   ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
               >
-                💾 备份恢复
+                💾 备份
               </button>
               <button
                 @click="activeTab = 'settings'"
@@ -88,7 +88,7 @@
                   ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
               >
-                ⚙️ 系统设置
+                ⚙️ 设置
               </button>
             </nav>
             <div class="mt-4 pt-4 border-t" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
@@ -362,36 +362,6 @@
                 <!-- 成功信息 -->
                 <div v-if="passwordSuccess" class="mt-4 p-3 rounded-lg border border-green-300 bg-green-50 text-green-600">
                   {{ passwordSuccess }}
-                </div>
-              </div>
-
-              <!-- 数据备份 -->
-              <div class="border-t pt-6" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
-                <h3 class="text-xl font-semibold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
-                  💾 数据备份
-                </h3>
-                <p class="mb-4 text-sm" :class="isDark ? 'text-gray-300' : 'text-gray-600'">
-                  备份所有文章和留言数据，下载为JSON文件
-                </p>
-                <button 
-                  @click="handleBackup"
-                  :disabled="isBackingUp"
-                  class="px-6 py-3 rounded-lg font-medium transition-all duration-300 disabled:opacity-50"
-                  :class="isDark 
-                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                    : 'bg-green-600 hover:bg-green-700 text-white'"
-                >
-                  {{ isBackingUp ? '备份中...' : '📥 下载数据备份' }}
-                </button>
-                
-                <!-- 备份错误信息 -->
-                <div v-if="backupError" class="mt-4 p-3 rounded-lg border border-red-300 bg-red-50 text-red-600">
-                  {{ backupError }}
-                </div>
-                
-                <!-- 备份成功信息 -->
-                <div v-if="backupSuccess" class="mt-4 p-3 rounded-lg border border-green-300 bg-green-50 text-green-600">
-                  {{ backupSuccess }}
                 </div>
               </div>
 

@@ -91,9 +91,17 @@ export default async function handler(req, res) {
           });
         }
 
+        const article = rows[0];
+
+        // 如果文章加密，不返回完整内容
+        if (article.is_encrypted) {
+          article.content = article.content ? article.content.substring(0, 100) + '...' : '';
+          article.summary = '这是一篇加密文章，需要密码才能查看完整内容';
+        }
+
         return res.status(200).json({
           success: true,
-          data: rows[0]
+          data: article
         });
       } else if (id) {
         // 通过id获取单篇文章
@@ -111,9 +119,17 @@ export default async function handler(req, res) {
           });
         }
 
+        const article = rows[0];
+
+        // 如果文章加密，不返回完整内容
+        if (article.is_encrypted) {
+          article.content = article.content ? article.content.substring(0, 100) + '...' : '';
+          article.summary = '这是一篇加密文章，需要密码才能查看完整内容';
+        }
+
         return res.status(200).json({
           success: true,
-          data: rows[0]
+          data: article
         });
       } else {
         // 获取所有文章
