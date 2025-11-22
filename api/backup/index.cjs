@@ -4,7 +4,7 @@ const withCors = (res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   withCors(res)
 
   if (req.method === 'OPTIONS') {

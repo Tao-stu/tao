@@ -75,7 +75,7 @@
             {{ article.title }}
           </h2>
           
-          <!-- 发布时间和加密状态 -->
+          <!-- 发布时间 -->
           <div class="flex flex-wrap items-center gap-3 md:gap-4 mb-4 md:mb-6 text-xs md:text-sm text-tokyo-night-dark5">
             <span class="flex items-center gap-2">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -89,12 +89,6 @@
               </svg>
               {{ article.location }}
             </span>
-            <span v-if="article.is_encrypted" class="flex items-center gap-1 text-tokyo-night-cyan">
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
-              </svg>
-              加密文章
-            </span>
           </div>
           
           <!-- 正文预览 -->
@@ -105,18 +99,15 @@
           <!-- 阅读更多按钮 -->
           <div class="mt-6 flex justify-between items-center">
             <div class="flex gap-1 md:gap-2">
-              <span v-for="tag in (article.tags || [])" :key="tag" class="px-2 md:px-3 py-1 text-xs rounded-full bg-tokyo-night-blue/20 text-tokyo-night-cyan border border-tokyo-night-blue/30">
-                {{ tag }}
+              <span class="px-2 md:px-3 py-1 text-xs rounded-full bg-tokyo-night-blue/20 text-tokyo-night-cyan border border-tokyo-night-blue/30">
+                技术
               </span>
               <span v-if="article.reading_time" class="px-2 md:px-3 py-1 text-xs rounded-full bg-tokyo-night-cyan/20 text-tokyo-night-cyan border border-tokyo-night-cyan/30">
                 {{ article.reading_time }} 分钟阅读
               </span>
             </div>
-            <button 
-              @click="handleArticleClick(article)"
-              class="px-4 md:px-6 py-2 bg-gradient-to-r from-tokyo-night-blue to-tokyo-night-cyan text-white rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105 group-hover:scale-110 text-sm md:text-base"
-            >
-              {{ article.is_encrypted ? '解锁阅读 →' : '阅读更多 →' }}
+            <button class="px-4 md:px-6 py-2 bg-gradient-to-r from-tokyo-night-blue to-tokyo-night-cyan text-white rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105 group-hover:scale-110 text-sm md:text-base">
+              阅读更多 →
             </button>
           </div>
           </div>
@@ -143,25 +134,6 @@
         </button>
       </div>
     </div>
-    
-    <!-- 文章密码验证弹窗 -->
-    <div v-if="showPasswordGate && selectedArticle" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-tokyo-night-bg rounded-3xl p-1 max-w-md w-full">
-        <ArticlePasswordGate 
-          :article-id="selectedArticle.id"
-          :article-slug="selectedArticle.slug"
-          @unlocked="handlePasswordSuccess"
-        />
-        <div class="p-4 border-t dark:border-tokyo-night-bg-highlight">
-          <button 
-            @click="showPasswordGate = false; selectedArticle = null"
-            class="w-full py-2 px-4 rounded-lg border border-gray-300 dark:border-tokyo-night-blue text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-tokyo-night-bg-highlight transition-all"
-          >
-            取消
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -169,7 +141,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useScrollAnimation } from '../composables/useScrollAnimation'
 import { useTheme } from '../composables/useTheme'
-import ArticlePasswordGate from '../components/ArticlePasswordGate.vue'
 
 useScrollAnimation()
 const { isDark } = useTheme()
@@ -180,11 +151,6 @@ const loading = ref(false)
 const error = ref('')
 const currentPage = ref(1)
 const pageSize = 4
-
-// 加密文章相关
-const selectedArticle = ref(null)
-const showPasswordGate = ref(false)
-const unlockedArticles = ref(new Set())
 
 const totalPages = computed(() => {
   if (articles.value.length === 0) return 1
@@ -244,29 +210,6 @@ const formatDate = (value) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
-}
-
-// 处理文章点击
-const handleArticleClick = (article) => {
-  if (article.is_encrypted) {
-    // 加密文章需要密码验证
-    selectedArticle.value = article
-    showPasswordGate.value = true
-  } else {
-    // 普通文章直接跳转（这里可以根据需要实现跳转逻辑）
-    console.log('打开普通文章:', article.title)
-    // 可以实现文章详情页或模态框显示
-  }
-}
-
-// 处理密码验证成功
-const handlePasswordSuccess = (articleId) => {
-  unlockedArticles.value.add(articleId)
-  showPasswordGate.value = false
-  selectedArticle.value = null
-  
-  // 可以在这里实现打开文章的逻辑
-  console.log('文章解锁成功:', articleId)
 }
 </script>
 

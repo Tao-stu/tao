@@ -128,59 +128,6 @@
         </div>
       </div>
 
-      <!-- 文章加密选项 -->
-      <div class="space-y-4">
-        <div class="flex items-center gap-3">
-          <input 
-            type="checkbox" 
-            id="enableEncryption"
-            v-model="formData.is_encrypted"
-            class="w-4 h-4 text-tokyo-night-blue rounded focus:ring-tokyo-night-blue"
-          />
-          <label for="enableEncryption" class="text-sm font-medium transition-colors cursor-pointer"
-                 :class="isDark ? 'text-white' : 'text-gray-800'">
-            🔐 启用文章加密（访问需要密码）
-          </label>
-        </div>
-
-        <!-- 加密密码输入框 -->
-        <div v-if="formData.is_encrypted" class="space-y-4 pl-7 border-l-2 border-tokyo-night-blue/20">
-          <div>
-            <label class="block text-sm font-medium mb-2 transition-colors" 
-                   :class="isDark ? 'text-white' : 'text-gray-800'">
-              访问密码
-            </label>
-            <input 
-              type="password" 
-              v-model="formData.access_password"
-              placeholder="设置文章访问密码"
-              class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              :class="isDark 
-                ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-2 transition-colors" 
-                   :class="isDark ? 'text-white' : 'text-gray-800'">
-              确认密码
-            </label>
-            <input 
-              type="password" 
-              v-model="confirmPassword"
-              placeholder="再次输入访问密码"
-              class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              :class="isDark 
-                ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-            />
-          </div>
-          <p class="text-sm transition-colors" :class="isDark ? 'text-gray-400' : 'text-gray-600'">
-            💡 提示：加密文章需要密码才能查看完整内容
-          </p>
-        </div>
-      </div>
-
       <!-- 标签和摘要放在一行 -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- 文章摘要 -->
@@ -298,7 +245,6 @@ const emit = defineEmits(['save', 'cancel'])
 
 // 响应式数据
 const showOptionalFields = ref(false)
-const confirmPassword = ref('')
 const formData = ref({
   title: '',
   slug: '',
@@ -307,9 +253,7 @@ const formData = ref({
   location: '',
   cover: '',
   tags: [],
-  status: 'draft',
-  is_encrypted: false,
-  access_password: ''
+  status: 'draft'
 })
 
 const tagsInput = ref('')
@@ -375,11 +319,8 @@ watch(() => props.post, (newPost) => {
       location: newPost.location || '',
       cover: newPost.cover || '',
       tags: Array.isArray(newPost.tags) ? [...newPost.tags] : [],
-      status: newPost.status || 'draft',
-      is_encrypted: !!newPost.is_encrypted,
-      access_password: newPost.access_password || ''
+      status: newPost.status || 'draft'
     }
-    confirmPassword.value = newPost.access_password || ''
     tagsInput.value = formData.value.tags.join(', ')
     showOptionalFields.value = !!(newPost.slug || newPost.location || newPost.cover)
   } else {
@@ -404,12 +345,8 @@ const resetForm = () => {
     location: '',
     cover: '',
     tags: [],
-    status: 'draft',
-    is_encrypted: false,
-    access_password: ''
+    status: 'draft'
   }
-  confirmPassword.value = ''
-  tagsInput.value = ''
   tagsInput.value = ''
   showOptionalFields.value = false
 }
@@ -440,28 +377,7 @@ const generateSlug = (title) => {
     .trim()
 }
 
-const validateForm = () => {
-  // 验证加密密码
-  if (formData.value.is_encrypted) {
-    if (!formData.value.access_password) {
-      alert('启用加密时必须设置访问密码')
-      return false
-    }
-    if (formData.value.access_password !== confirmPassword.value) {
-      alert('两次输入的密码不一致')
-      return false
-    }
-    if (formData.value.access_password.length < 4) {
-      alert('访问密码长度至少为4位')
-      return false
-    }
-  }
-  return true
-}
-
 const saveDraft = () => {
-  if (!validateForm()) return
-  
   const data = { ...formData.value, status: 'draft' }
   if (!data.slug && data.title) {
     data.slug = generateSlug(data.title)
@@ -470,8 +386,6 @@ const saveDraft = () => {
 }
 
 const publish = () => {
-  if (!validateForm()) return
-  
   const data = { ...formData.value, status: 'published' }
   if (!data.slug && data.title) {
     data.slug = generateSlug(data.title)

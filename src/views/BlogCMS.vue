@@ -73,15 +73,6 @@
                 💬 留言管理
               </button>
               <button
-                @click="activeTab = 'backup'"
-                class="w-full text-left px-4 py-3 rounded-lg transition-all duration-300"
-                :class="activeTab === 'backup'
-                  ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
-                  : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
-              >
-                💾 备份管理
-              </button>
-              <button
                 @click="activeTab = 'settings'"
                 class="w-full text-left px-4 py-3 rounded-lg transition-all duration-300"
                 :class="activeTab === 'settings'
@@ -187,11 +178,6 @@
             <GuestbookAdmin />
           </div>
 
-          <!-- 备份管理 -->
-          <div v-if="activeTab === 'backup'">
-            <BackupManager />
-          </div>
-
           <!-- 系统设置 -->
           <div v-if="activeTab === 'settings'">
             <div class="glass-effect rounded-3xl p-8">
@@ -284,106 +270,6 @@
                 </div>
               </div>
 
-              <!-- 文章密码管理 -->
-              <div class="mb-8">
-                <h3 class="text-xl font-semibold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
-                  🔑 文章密码管理
-                </h3>
-                
-                <div class="space-y-4">
-                  <!-- 选择文章 -->
-                  <div>
-                    <label class="block text-sm font-medium mb-2 transition-colors" 
-                           :class="isDark ? 'text-white' : 'text-gray-800'">
-                      选择要修改密码的文章
-                    </label>
-                    <select 
-                      v-model="selectedPostId"
-                      class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                      :class="isDark 
-                        ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white' 
-                        : 'bg-white border-gray-300 text-gray-900'"
-                    >
-                      <option value="">请选择文章</option>
-                      <option 
-                        v-for="post in blogPosts.filter(p => p.is_encrypted)" 
-                        :key="post.id" 
-                        :value="post.id"
-                      >
-                        🔒 {{ post.title }}
-                      </option>
-                    </select>
-                  </div>
-
-                  <!-- 新密码输入 -->
-                  <div v-if="selectedPostId">
-                    <label class="block text-sm font-medium mb-2 transition-colors" 
-                           :class="isDark ? 'text-white' : 'text-gray-800'">
-                      新的访问密码
-                    </label>
-                    <input 
-                      type="password" 
-                      v-model="newPostPassword"
-                      placeholder="留空则移除密码保护"
-                      class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                      :class="isDark 
-                        ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-                    />
-                  </div>
-
-                  <!-- 确认密码 -->
-                  <div v-if="selectedPostId && newPostPassword">
-                    <label class="block text-sm font-medium mb-2 transition-colors" 
-                           :class="isDark ? 'text-white' : 'text-gray-800'">
-                      确认新密码
-                    </label>
-                    <input 
-                      type="password" 
-                      v-model="confirmPostPassword"
-                      placeholder="再次输入新密码"
-                      class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                      :class="isDark 
-                        ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-                    />
-                  </div>
-
-                  <!-- 操作按钮 -->
-                  <div class="flex gap-2" v-if="selectedPostId">
-                    <button 
-                      @click="updatePostPassword"
-                      :disabled="isUpdatingPostPassword"
-                      class="flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 disabled:opacity-50"
-                      :class="isDark 
-                        ? 'bg-tokyo-night-blue hover:bg-tokyo-night-blue0 text-white' 
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'"
-                    >
-                      {{ isUpdatingPostPassword ? '更新中...' : '更新密码' }}
-                    </button>
-                    <button 
-                      @click="removePostPassword"
-                      :disabled="isUpdatingPostPassword"
-                      class="px-4 py-3 rounded-lg font-medium border transition-all duration-300 disabled:opacity-50"
-                      :class="isDark 
-                        ? 'border-red-500 text-red-500 hover:bg-red-500 hover:text-white' 
-                        : 'border-red-600 text-red-600 hover:bg-red-600 hover:text-white'"
-                    >
-                      移除密码
-                    </button>
-                  </div>
-                </div>
-
-                <!-- 文章密码操作状态 -->
-                <div v-if="postPasswordError" class="mt-4 p-3 rounded-lg border border-red-300 bg-red-50 text-red-600">
-                  {{ postPasswordError }}
-                </div>
-
-                <div v-if="postPasswordSuccess" class="mt-4 p-3 rounded-lg border border-green-300 bg-green-50 text-green-600">
-                  {{ postPasswordSuccess }}
-                </div>
-              </div>
-
               <!-- 系统信息 -->
               <div class="border-t pt-6" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
                 <h3 class="text-xl font-semibold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
@@ -409,7 +295,6 @@ import { ref, onMounted } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import BlogEditor from '../components/BlogEditor.vue'
 import GuestbookAdmin from '../components/GuestbookAdmin.vue'
-import BackupManager from '../components/BackupManager.vue'
 import axios from 'axios'
 
 const { isDark } = useTheme()
@@ -443,14 +328,6 @@ const passwordForm = ref({
 const isChangingPassword = ref(false)
 const passwordError = ref('')
 const passwordSuccess = ref('')
-
-// 文章密码管理相关
-const selectedPostId = ref('')
-const newPostPassword = ref('')
-const confirmPostPassword = ref('')
-const isUpdatingPostPassword = ref(false)
-const postPasswordError = ref('')
-const postPasswordSuccess = ref('')
 
 // 获取认证token
 const getAuthToken = () => {
@@ -700,137 +577,6 @@ const handleChangePassword = async () => {
     passwordError.value = error.response?.data?.error || error.message || '修改密码失败，请稍后重试'
   } finally {
     isChangingPassword.value = false
-  }
-}
-
-// 更新文章密码
-const updatePostPassword = async () => {
-  // 清除之前的消息
-  postPasswordError.value = ''
-  postPasswordSuccess.value = ''
-  
-  // 验证
-  if (!selectedPostId.value) {
-    postPasswordError.value = '请选择要修改的文章'
-    return
-  }
-  
-  if (newPostPassword.value && newPostPassword.value.length < 4) {
-    postPasswordError.value = '文章访问密码长度至少为4位'
-    return
-  }
-  
-  if (newPostPassword.value && newPostPassword.value !== confirmPostPassword.value) {
-    postPasswordError.value = '两次输入的密码不一致'
-    return
-  }
-  
-  try {
-    isUpdatingPostPassword.value = true
-    
-    // 获取选中的文章
-    const selectedPost = blogPosts.value.find(post => post.id === parseInt(selectedPostId.value))
-    if (!selectedPost) {
-      throw new Error('文章不存在')
-    }
-    
-    // 更新文章密码
-    const response = await axios.put(`${API_BASE}/posts`, {
-      id: selectedPost.id,
-      slug: selectedPost.slug,
-      title: selectedPost.title,
-      content: selectedPost.content,
-      tags: selectedPost.tags || [],
-      status: selectedPost.status,
-      is_encrypted: !!newPostPassword.value,
-      access_password: newPostPassword.value || null
-    }, {
-      headers: createAuthHeaders()
-    })
-    
-    if (response.data.success) {
-      postPasswordSuccess.value = '文章密码更新成功！'
-      // 清空表单
-      selectedPostId.value = ''
-      newPostPassword.value = ''
-      confirmPostPassword.value = ''
-      
-      // 刷新文章列表
-      await fetchPosts()
-      
-      // 5秒后清除成功消息
-      setTimeout(() => {
-        postPasswordSuccess.value = ''
-      }, 5000)
-    } else {
-      throw new Error(response.data.error || '更新失败')
-    }
-  } catch (error) {
-    console.error('更新文章密码失败:', error)
-    postPasswordError.value = error.response?.data?.error || error.message || '更新文章密码失败，请稍后重试'
-  } finally {
-    isUpdatingPostPassword.value = false
-  }
-}
-
-// 移除文章密码
-const removePostPassword = async () => {
-  if (!selectedPostId.value) {
-    postPasswordError.value = '请选择要移除密码的文章'
-    return
-  }
-  
-  if (!confirm(`确定要移除这篇文章的密码保护吗？移除后任何人都可以访问。`)) {
-    return
-  }
-  
-  try {
-    isUpdatingPostPassword.value = true
-    postPasswordError.value = ''
-    postPasswordSuccess.value = ''
-    
-    // 获取选中的文章
-    const selectedPost = blogPosts.value.find(post => post.id === parseInt(selectedPostId.value))
-    if (!selectedPost) {
-      throw new Error('文章不存在')
-    }
-    
-    // 移除文章密码
-    const response = await axios.put(`${API_BASE}/posts`, {
-      id: selectedPost.id,
-      slug: selectedPost.slug,
-      title: selectedPost.title,
-      content: selectedPost.content,
-      tags: selectedPost.tags || [],
-      status: selectedPost.status,
-      is_encrypted: false,
-      access_password: null
-    }, {
-      headers: createAuthHeaders()
-    })
-    
-    if (response.data.success) {
-      postPasswordSuccess.value = '文章密码保护已移除！'
-      // 清空表单
-      selectedPostId.value = ''
-      newPostPassword.value = ''
-      confirmPostPassword.value = ''
-      
-      // 刷新文章列表
-      await fetchPosts()
-      
-      // 5秒后清除成功消息
-      setTimeout(() => {
-        postPasswordSuccess.value = ''
-      }, 5000)
-    } else {
-      throw new Error(response.data.error || '移除失败')
-    }
-  } catch (error) {
-    console.error('移除文章密码失败:', error)
-    postPasswordError.value = error.response?.data?.error || error.message || '移除文章密码失败，请稍后重试'
-  } finally {
-    isUpdatingPostPassword.value = false
   }
 }
 </script>
