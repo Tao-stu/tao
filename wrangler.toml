@@ -1,0 +1,19 @@
+name = "taoweb"
+compatibility_date = "2023-12-01"
+
+[env.production]
+name = "taoweb"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "taoweb-db"
+database_id = "your-database-id-here"
+
+# 本地开发配置
+[env.development]
+name = "taoweb-dev"
+
+[[env.development.d1_databases]]
+binding = "DB"
+database_name = "taoweb-db-dev"
+database_id = "your-dev-database-id-here"
