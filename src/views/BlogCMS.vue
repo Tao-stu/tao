@@ -46,17 +46,17 @@
       </div>
 
       <!-- 已认证状态 - 显示管理界面 -->
-      <div v-else class="flex gap-6">
-        <!-- 左侧菜单 - 块元素 -->
-        <div class="w-48 flex-shrink-0">
-          <div class="glass-effect rounded-2xl p-4 sticky top-20">
-            <h2 class="text-xl font-bold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
+      <div v-else class="flex gap-4">
+        <!-- 左侧菜单 - 块元素左对齐 -->
+        <div class="w-44 flex-shrink-0">
+          <div class="glass-effect rounded-2xl p-3 sticky top-20">
+            <h2 class="text-lg font-bold mb-3 transition-colors text-left" :class="isDark ? 'text-white' : 'text-gray-800'">
               管理菜单
             </h2>
-            <nav class="space-y-2">
+            <nav class="space-y-1">
               <button
                 @click="activeTab = 'blog'"
-                class="w-full text-left px-4 py-3 rounded-lg transition-all duration-300 text-base font-medium"
+                class="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm font-medium"
                 :class="activeTab === 'blog'
                   ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
@@ -65,7 +65,7 @@
               </button>
               <button
                 @click="activeTab = 'guestbook'"
-                class="w-full text-left px-4 py-3 rounded-lg transition-all duration-300 text-base font-medium"
+                class="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm font-medium"
                 :class="activeTab === 'guestbook'
                   ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
@@ -74,7 +74,7 @@
               </button>
               <button
                 @click="activeTab = 'backup'"
-                class="w-full text-left px-4 py-3 rounded-lg transition-all duration-300 text-base font-medium"
+                class="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm font-medium"
                 :class="activeTab === 'backup'
                   ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
@@ -83,7 +83,7 @@
               </button>
               <button
                 @click="activeTab = 'settings'"
-                class="w-full text-left px-4 py-3 rounded-lg transition-all duration-300 text-base font-medium"
+                class="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm font-medium"
                 :class="activeTab === 'settings'
                   ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
@@ -91,10 +91,10 @@
                 ⚙️ 设置
               </button>
             </nav>
-            <div class="mt-6 pt-4 border-t" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
+            <div class="mt-4 pt-3 border-t" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
               <button 
                 @click="logout"
-                class="w-full px-4 py-3 rounded-lg font-medium border transition-all duration-300 text-base"
+                class="w-full px-3 py-2 rounded-lg font-medium border transition-all duration-300 text-sm"
                 :class="isDark 
                   ? 'border-tokyo-night-blue text-tokyo-night-cyan hover:bg-tokyo-night-blue hover:text-white' 
                   : 'border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'"
@@ -105,8 +105,8 @@
           </div>
         </div>
 
-        <!-- 右侧内容区域 -->
-        <div class="flex-1 min-w-0 ml-52">
+        <!-- 右侧内容区域 - 占比更大 -->
+        <div class="flex-1 min-w-0">
           <!-- 文章管理 -->
           <div v-if="activeTab === 'blog'">
             <div class="flex justify-between items-center mb-6">
