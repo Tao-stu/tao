@@ -47,16 +47,16 @@
 
       <!-- 已认证状态 - 显示管理界面 -->
       <div v-else class="flex gap-6">
-        <!-- 左侧菜单 - 固定在屏幕左侧 -->
-        <div class="w-64 flex-shrink-0 fixed left-0 top-20 h-screen z-10">
-          <div class="glass-effect rounded-r-2xl p-4 h-full">
-            <h2 class="text-xl font-bold mb-6 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
+        <!-- 左侧菜单 - 紧凑型 -->
+        <div class="w-48 flex-shrink-0 fixed left-0 top-20 h-screen z-10">
+          <div class="glass-effect rounded-r-2xl p-3 h-full">
+            <h2 class="text-lg font-bold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
               管理菜单
             </h2>
-            <nav class="space-y-2">
+            <nav class="space-y-1">
               <button
                 @click="activeTab = 'blog'"
-                class="w-full text-left px-4 py-3 rounded-lg transition-all duration-300"
+                class="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm"
                 :class="activeTab === 'blog'
                   ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
@@ -65,7 +65,7 @@
               </button>
               <button
                 @click="activeTab = 'guestbook'"
-                class="w-full text-left px-4 py-3 rounded-lg transition-all duration-300"
+                class="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm"
                 :class="activeTab === 'guestbook'
                   ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
@@ -73,8 +73,17 @@
                 💬 留言管理
               </button>
               <button
+                @click="activeTab = 'backup'"
+                class="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm"
+                :class="activeTab === 'backup'
+                  ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
+                  : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
+              >
+                💾 备份恢复
+              </button>
+              <button
                 @click="activeTab = 'settings'"
-                class="w-full text-left px-4 py-3 rounded-lg transition-all duration-300"
+                class="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm"
                 :class="activeTab === 'settings'
                   ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
@@ -82,10 +91,10 @@
                 ⚙️ 系统设置
               </button>
             </nav>
-            <div class="mt-6 pt-6 border-t" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
+            <div class="mt-4 pt-4 border-t" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
               <button 
                 @click="logout"
-                class="w-full px-4 py-2 rounded-lg font-medium border transition-all duration-300"
+                class="w-full px-3 py-2 rounded-lg font-medium border transition-all duration-300 text-sm"
                 :class="isDark 
                   ? 'border-tokyo-night-blue text-tokyo-night-cyan hover:bg-tokyo-night-blue hover:text-white' 
                   : 'border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'"
@@ -96,8 +105,8 @@
           </div>
         </div>
 
-        <!-- 右侧内容区域 - 放大并左移 -->
-        <div class="flex-1 min-w-0 ml-64 mr-0">
+        <!-- 右侧内容区域 -->
+        <div class="flex-1 min-w-0 ml-48 mr-0">
           <!-- 文章管理 -->
           <div v-if="activeTab === 'blog'">
             <div class="flex justify-between items-center mb-6">
@@ -176,6 +185,92 @@
           <!-- 留言管理 -->
           <div v-if="activeTab === 'guestbook'">
             <GuestbookAdmin />
+          </div>
+
+          <!-- 备份恢复 -->
+          <div v-if="activeTab === 'backup'">
+            <div class="glass-effect rounded-3xl p-8">
+              <h2 class="text-2xl font-bold mb-6 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
+                数据备份与恢复
+              </h2>
+              
+              <!-- 数据备份 -->
+              <div class="mb-8">
+                <h3 class="text-xl font-semibold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
+                  💾 备份数据
+                </h3>
+                <p class="mb-4 text-sm" :class="isDark ? 'text-gray-300' : 'text-gray-600'">
+                  备份所有文章和留言数据，下载为JSON文件
+                </p>
+                <button 
+                  @click="handleBackup"
+                  :disabled="isBackingUp"
+                  class="px-6 py-3 rounded-lg font-medium transition-all duration-300 disabled:opacity-50"
+                  :class="isDark 
+                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                    : 'bg-green-600 hover:bg-green-700 text-white'"
+                >
+                  {{ isBackingUp ? '备份中...' : '📥 下载数据备份' }}
+                </button>
+                
+                <!-- 备份错误信息 -->
+                <div v-if="backupError" class="mt-4 p-3 rounded-lg border border-red-300 bg-red-50 text-red-600">
+                  {{ backupError }}
+                </div>
+                
+                <!-- 备份成功信息 -->
+                <div v-if="backupSuccess" class="mt-4 p-3 rounded-lg border border-green-300 bg-green-50 text-green-600">
+                  {{ backupSuccess }}
+                </div>
+              </div>
+
+              <!-- 数据恢复 -->
+              <div class="border-t pt-6" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
+                <h3 class="text-xl font-semibold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
+                  📤 恢复数据
+                </h3>
+                <p class="mb-4 text-sm" :class="isDark ? 'text-gray-300' : 'text-gray-600'">
+                  从备份文件恢复数据（此操作将覆盖现有数据，请谨慎操作）
+                </p>
+                <div class="space-y-4 max-w-md">
+                  <div>
+                    <label class="block text-sm font-medium mb-2 transition-colors" 
+                           :class="isDark ? 'text-white' : 'text-gray-800'">
+                      选择备份文件
+                    </label>
+                    <input 
+                      type="file" 
+                      ref="backupFile"
+                      accept=".json"
+                      class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
+                      :class="isDark 
+                        ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white file:bg-tokyo-night-blue file:text-white' 
+                        : 'bg-white border-gray-300 text-gray-900 file:bg-blue-600 file:text-white'"
+                    />
+                  </div>
+                  <button 
+                    @click="handleRestore"
+                    :disabled="isRestoring || !backupFile?.files?.length"
+                    class="w-full py-3 px-4 rounded-lg font-medium transition-all duration-300 disabled:opacity-50"
+                    :class="isDark 
+                      ? 'bg-orange-600 hover:bg-orange-700 text-white' 
+                      : 'bg-orange-600 hover:bg-orange-700 text-white'"
+                  >
+                    {{ isRestoring ? '恢复中...' : '🔄 恢复数据' }}
+                  </button>
+                </div>
+                
+                <!-- 恢复错误信息 -->
+                <div v-if="restoreError" class="mt-4 p-3 rounded-lg border border-red-300 bg-red-50 text-red-600">
+                  {{ restoreError }}
+                </div>
+                
+                <!-- 恢复成功信息 -->
+                <div v-if="restoreSuccess" class="mt-4 p-3 rounded-lg border border-green-300 bg-green-50 text-green-600">
+                  {{ restoreSuccess }}
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- 系统设置 -->
@@ -300,6 +395,89 @@
                 </div>
               </div>
 
+              <!-- 文章密码管理 -->
+              <div class="border-t pt-6" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
+                <h3 class="text-xl font-semibold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
+                  🔑 文章密码管理
+                </h3>
+                <p class="mb-4 text-sm" :class="isDark ? 'text-gray-300' : 'text-gray-600'">
+                  修改文章的访问密码，无需验证原密码
+                </p>
+                
+                <div class="space-y-4 max-w-md">
+                  <!-- 选择文章 -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2 transition-colors" 
+                           :class="isDark ? 'text-white' : 'text-gray-800'">
+                      选择文章
+                    </label>
+                    <select 
+                      v-model="articlePasswordForm.articleId"
+                      class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                      :class="isDark 
+                        ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'"
+                    >
+                      <option value="">请选择文章</option>
+                      <option v-for="post in blogPosts" :key="post.id" :value="post.id">
+                        {{ post.title }} {{ post.is_encrypted ? '(已加密)' : '' }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <!-- 新密码 -->
+                  <div>
+                    <label class="block text-sm font-medium mb-2 transition-colors" 
+                           :class="isDark ? 'text-white' : 'text-gray-800'">
+                      访问密码
+                    </label>
+                    <div class="flex gap-2">
+                      <input 
+                        type="password" 
+                        v-model="articlePasswordForm.password"
+                        placeholder="留空则移除密码"
+                        class="flex-1 px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        :class="isDark 
+                          ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
+                      />
+                      <button 
+                        type="button"
+                        @click="generateRandomPassword"
+                        class="px-4 py-3 rounded-lg font-medium border transition-all"
+                        :class="isDark 
+                          ? 'border-tokyo-night-blue text-tokyo-night-cyan hover:bg-tokyo-night-blue hover:text-white' 
+                          : 'border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'"
+                      >
+                        随机生成
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 提交按钮 -->
+                  <button 
+                    @click="handleArticlePasswordChange"
+                    :disabled="isChangingArticlePassword || !articlePasswordForm.articleId"
+                    class="w-full py-3 px-4 rounded-lg font-medium transition-all duration-300 disabled:opacity-50"
+                    :class="isDark 
+                      ? 'bg-tokyo-night-blue hover:bg-tokyo-night-blue0 text-white' 
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'"
+                  >
+                    {{ isChangingArticlePassword ? '修改中...' : '修改密码' }}
+                  </button>
+                </div>
+                
+                <!-- 错误信息 -->
+                <div v-if="articlePasswordError" class="mt-4 p-3 rounded-lg border border-red-300 bg-red-50 text-red-600">
+                  {{ articlePasswordError }}
+                </div>
+                
+                <!-- 成功信息 -->
+                <div v-if="articlePasswordSuccess" class="mt-4 p-3 rounded-lg border border-green-300 bg-green-50 text-green-600">
+                  {{ articlePasswordSuccess }}
+                </div>
+              </div>
+
               <!-- 系统信息 -->
               <div class="border-t pt-6" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
                 <h3 class="text-xl font-semibold mb-4 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
@@ -363,6 +541,21 @@ const passwordSuccess = ref('')
 const isBackingUp = ref(false)
 const backupError = ref('')
 const backupSuccess = ref('')
+
+// 恢复相关
+const isRestoring = ref(false)
+const restoreError = ref('')
+const restoreSuccess = ref('')
+const backupFile = ref(null)
+
+// 文章密码管理相关
+const isChangingArticlePassword = ref(false)
+const articlePasswordError = ref('')
+const articlePasswordSuccess = ref('')
+const articlePasswordForm = ref({
+  articleId: '',
+  password: ''
+})
 
 // 获取认证token
 const getAuthToken = () => {
@@ -663,6 +856,122 @@ const handleBackup = async () => {
     backupError.value = error.response?.data?.error || error.message || '备份失败，请稍后重试'
   } finally {
     isBackingUp.value = false
+  }
+}
+
+// 处理数据恢复
+const handleRestore = async () => {
+  try {
+    isRestoring.value = true
+    restoreError.value = ''
+    restoreSuccess.value = ''
+    
+    if (!backupFile.value?.files?.length) {
+      restoreError.value = '请选择备份文件'
+      return
+    }
+    
+    const file = backupFile.value.files[0]
+    const text = await file.text()
+    const backupData = JSON.parse(text)
+    
+    // 验证备份文件格式
+    if (!backupData.backup || !backupData.backup.posts || !backupData.backup.messages) {
+      restoreError.value = '备份文件格式不正确'
+      return
+    }
+    
+    // 调用恢复API
+    const response = await axios.post(`${API_BASE}/restore`, backupData, {
+      headers: createAuthHeaders()
+    })
+    
+    if (response.data.success) {
+      restoreSuccess.value = `数据恢复成功！已恢复 ${backupData.backup.posts.length} 篇文章和 ${backupData.backup.messages.length} 条留言`
+      
+      // 刷新文章列表
+      await fetchPosts()
+      
+      // 清空文件选择
+      backupFile.value.value = ''
+      
+      // 3秒后清除成功消息
+      setTimeout(() => {
+        restoreSuccess.value = ''
+      }, 5000)
+    } else {
+      restoreError.value = response.data.error || '恢复失败'
+    }
+    
+  } catch (error) {
+    console.error('恢复失败:', error)
+    if (error instanceof SyntaxError) {
+      restoreError.value = '备份文件格式错误，请选择有效的JSON文件'
+    } else {
+      restoreError.value = error.response?.data?.error || error.message || '恢复失败，请稍后重试'
+    }
+  } finally {
+    isRestoring.value = false
+  }
+}
+
+// 生成随机密码
+const generateRandomPassword = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+  let password = ''
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  articlePasswordForm.value.password = password
+}
+
+// 处理文章密码修改
+const handleArticlePasswordChange = async () => {
+  try {
+    isChangingArticlePassword.value = true
+    articlePasswordError.value = ''
+    articlePasswordSuccess.value = ''
+    
+    if (!articlePasswordForm.value.articleId) {
+      articlePasswordError.value = '请选择文章'
+      return
+    }
+    
+    const postData = {
+      is_encrypted: !!articlePasswordForm.value.password,
+      access_password: articlePasswordForm.value.password || null
+    }
+    
+    // 调用更新文章API
+    const response = await axios.put(`${API_BASE}/posts?id=${articlePasswordForm.value.articleId}`, postData, {
+      headers: createAuthHeaders()
+    })
+    
+    if (response.data.success) {
+      articlePasswordSuccess.value = `文章密码修改成功！${articlePasswordForm.value.password ? '已设置访问密码' : '已移除访问密码'}`
+      
+      // 刷新文章列表
+      await fetchPosts()
+      
+      // 重置表单
+      articlePasswordForm.value = {
+        articleId: '',
+        password: ''
+      }
+      
+      // 3秒后清除成功消息
+      setTimeout(() => {
+        articlePasswordSuccess.value = ''
+      }, 3000)
+    } else {
+      articlePasswordError.value = response.data.error || '修改失败'
+    }
+    
+  } catch (error) {
+    console.error('修改文章密码失败:', error)
+    articlePasswordError.value = error.response?.data?.error || error.message || '修改失败，请稍后重试'
+  } finally {
+    isChangingArticlePassword.value = false
   }
 }
 </script>

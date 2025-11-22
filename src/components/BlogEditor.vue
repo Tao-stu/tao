@@ -57,20 +57,37 @@
         />
       </div>
 
-      <!-- 可选字段区域 -->
+      <!-- 可选字段和加密设置 -->
       <div class="space-y-4">
-        <!-- 可选字段标题 -->
-        <div class="flex items-center gap-3">
-          <input 
-            type="checkbox" 
-            id="showOptionalFields"
-            v-model="showOptionalFields"
-            class="w-4 h-4 text-tokyo-night-blue rounded focus:ring-tokyo-night-blue"
-          />
-          <label for="showOptionalFields" class="text-sm font-medium transition-colors cursor-pointer"
-                 :class="isDark ? 'text-white' : 'text-gray-800'">
-            显示可选字段（别名、地点、封面图）
-          </label>
+        <!-- 选项标题行 -->
+        <div class="flex items-center gap-6">
+          <!-- 可选字段 -->
+          <div class="flex items-center gap-3">
+            <input 
+              type="checkbox" 
+              id="showOptionalFields"
+              v-model="showOptionalFields"
+              class="w-4 h-4 text-tokyo-night-blue rounded focus:ring-tokyo-night-blue"
+            />
+            <label for="showOptionalFields" class="text-sm font-medium transition-colors cursor-pointer"
+                   :class="isDark ? 'text-white' : 'text-gray-800'">
+              可选字段（别名、地点、封面图）
+            </label>
+          </div>
+          
+          <!-- 文章加密 -->
+          <div class="flex items-center gap-3">
+            <input 
+              type="checkbox" 
+              id="showPasswordFields"
+              v-model="showPasswordFields"
+              class="w-4 h-4 text-tokyo-night-blue rounded focus:ring-tokyo-night-blue"
+            />
+            <label for="showPasswordFields" class="text-sm font-medium transition-colors cursor-pointer"
+                   :class="isDark ? 'text-white' : 'text-gray-800'">
+              文章加密
+            </label>
+          </div>
         </div>
 
         <!-- 可选字段内容 -->
@@ -165,68 +182,39 @@
         </div>
       </div>
 
-      <!-- 文章加密设置 -->
-      <div class="space-y-4">
-        <div class="flex items-center gap-3">
-          <input 
-            type="checkbox" 
-            id="showPasswordFields"
-            v-model="showPasswordFields"
-            class="w-4 h-4 text-tokyo-night-blue rounded focus:ring-tokyo-night-blue"
-          />
-          <label for="showPasswordFields" class="text-sm font-medium transition-colors cursor-pointer"
+      <!-- 文章加密内容 -->
+      <div v-if="showPasswordFields" class="space-y-4 pl-7 border-l-2 border-tokyo-night-blue/20">
+        <!-- 访问密码 -->
+        <div>
+          <label class="block text-sm font-medium mb-2 transition-colors" 
                  :class="isDark ? 'text-white' : 'text-gray-800'">
-            设置文章访问密码
+            访问密码
           </label>
-        </div>
-
-        <div v-if="showPasswordFields" class="space-y-4 pl-7 border-l-2 border-tokyo-night-blue/20">
-          <!-- 启用加密 -->
-          <div class="flex items-center gap-3">
+          <div class="flex gap-2">
             <input 
-              type="checkbox" 
-              id="isEncrypted"
-              v-model="formData.is_encrypted"
-              class="w-4 h-4 text-tokyo-night-blue rounded focus:ring-tokyo-night-blue"
+              type="password" 
+              v-model="formData.access_password"
+              placeholder="输入访问密码（留空则不加密）"
+              class="flex-1 px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              :class="isDark 
+                ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
+                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
             />
-            <label for="isEncrypted" class="text-sm font-medium transition-colors cursor-pointer"
-                   :class="isDark ? 'text-white' : 'text-gray-800'">
-              启用文章加密
-            </label>
+            <button 
+              type="button"
+              @click="generateRandomPassword"
+              class="px-4 py-3 rounded-lg font-medium transition-all"
+              :class="isDark 
+                ? 'bg-tokyo-night-blue text-white hover:bg-tokyo-night-blue0' 
+                : 'bg-blue-600 text-white hover:bg-blue-700'"
+            >
+              生成随机密码
+            </button>
           </div>
-
-          <!-- 访问密码 -->
-          <div v-if="formData.is_encrypted">
-            <label class="block text-sm font-medium mb-2 transition-colors" 
-                   :class="isDark ? 'text-white' : 'text-gray-800'">
-              访问密码
-            </label>
-            <div class="flex gap-2">
-              <input 
-                type="password" 
-                v-model="formData.access_password"
-                placeholder="输入访问密码"
-                class="flex-1 px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                :class="isDark 
-                  ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-              />
-              <button 
-                type="button"
-                @click="generateRandomPassword"
-                class="px-4 py-3 rounded-lg font-medium transition-all"
-                :class="isDark 
-                  ? 'bg-tokyo-night-blue text-white hover:bg-tokyo-night-blue0' 
-                  : 'bg-blue-600 text-white hover:bg-blue-700'"
-              >
-                生成随机密码
-              </button>
-            </div>
-            <p class="text-xs mt-2 transition-colors"
-               :class="isDark ? 'text-gray-400' : 'text-gray-600'">
-              提示：密码将直接设置，无需验证原密码
-            </p>
-          </div>
+          <p class="text-xs mt-2 transition-colors"
+             :class="isDark ? 'text-gray-400' : 'text-gray-600'">
+            提示：设置密码后文章将需要密码才能访问
+          </p>
         </div>
       </div>
 
@@ -463,6 +451,8 @@ const generateSlug = (title) => {
 
 const saveDraft = () => {
   const data = { ...formData.value, status: 'draft' }
+  // 自动设置加密状态
+  data.is_encrypted = !!data.access_password
   if (!data.slug && data.title) {
     data.slug = generateSlug(data.title)
   }
@@ -471,6 +461,8 @@ const saveDraft = () => {
 
 const publish = () => {
   const data = { ...formData.value, status: 'published' }
+  // 自动设置加密状态
+  data.is_encrypted = !!data.access_password
   if (!data.slug && data.title) {
     data.slug = generateSlug(data.title)
   }
