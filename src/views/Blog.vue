@@ -70,10 +70,22 @@
           
           <!-- 文章内容 -->
           <div class="relative z-10">
-          <!-- 标题 -->
-          <h2 class="text-xl md:text-2xl lg:text-3xl font-bold mb-3 md:mb-4 text-tokyo-night-cyan hover:text-tokyo-night-blue transition-colors cursor-pointer">
-            {{ article.title }}
-          </h2>
+          <!-- 标题和加密标识 -->
+          <div class="flex items-start gap-3 mb-3 md:mb-4">
+            <h2 
+              class="text-xl md:text-2xl lg:text-3xl font-bold text-tokyo-night-cyan hover:text-tokyo-night-blue transition-colors cursor-pointer flex-1"
+              @click="$router.push(`/article/${article.slug}`)"
+            >
+              {{ article.title }}
+            </h2>
+            <!-- 加密标识 -->
+            <div v-if="article.is_encrypted" class="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/20 border border-amber-500/30">
+              <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+              </svg>
+              <span class="text-xs font-medium text-amber-500">加密</span>
+            </div>
+          </div>
           
           <!-- 发布时间 -->
           <div class="flex flex-wrap items-center gap-3 md:gap-4 mb-4 md:mb-6 text-xs md:text-sm text-tokyo-night-dark5">
@@ -106,8 +118,11 @@
                 {{ article.reading_time }} 分钟阅读
               </span>
             </div>
-            <button class="px-4 md:px-6 py-2 bg-gradient-to-r from-tokyo-night-blue to-tokyo-night-cyan text-white rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105 group-hover:scale-110 text-sm md:text-base">
-              阅读更多 →
+            <button 
+              @click="$router.push(`/article/${article.slug}`)"
+              class="px-4 md:px-6 py-2 bg-gradient-to-r from-tokyo-night-blue to-tokyo-night-cyan text-white rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105 group-hover:scale-110 text-sm md:text-base"
+            >
+              {{ article.is_encrypted ? '解锁阅读 →' : '阅读更多 →' }}
             </button>
           </div>
           </div>

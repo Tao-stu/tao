@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import About from '../views/About.vue'
 import Blog from '../views/Blog.vue'
+import Article from '../views/Article.vue'
 import BlogCMS from '../views/BlogCMS.vue'
 
 import Guestbook from '../views/Guestbook.vue'
@@ -25,6 +26,12 @@ const routes = [
     name: 'Blog',
     component: Blog,
     meta: { title: '文章 - Tao' }
+  },
+  {
+    path: '/article/:slug',
+    name: 'Article',
+    component: Article,
+    meta: { title: '文章详情 - Tao' }
   },
   {
     path: '/cms',

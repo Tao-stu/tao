@@ -44,6 +44,8 @@ export default async function handler(req, res) {
           tags JSONB DEFAULT '[]',
           status VARCHAR(20) DEFAULT 'published',
           published BOOLEAN DEFAULT TRUE,
+          is_encrypted BOOLEAN DEFAULT FALSE,
+          access_password VARCHAR(255),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -61,6 +63,8 @@ export default async function handler(req, res) {
           tags JSONB DEFAULT '[]',
           status VARCHAR(20) DEFAULT 'published',
           published BOOLEAN DEFAULT TRUE,
+          is_encrypted BOOLEAN DEFAULT FALSE,
+          access_password VARCHAR(255),
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -142,7 +146,7 @@ export default async function handler(req, res) {
 
     // POST - 创建新文章
     if (req.method === 'POST') {
-      const { slug, title, summary, content, location, cover, tags, status, published } = req.body;
+      const { slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password } = req.body;
 
       // 验证必填字段
       if (!title || !content) {
@@ -172,8 +176,8 @@ export default async function handler(req, res) {
       let result;
       if (pool) {
         const insertQuery = `
-          INSERT INTO posts (slug, title, summary, content, location, cover, tags, status, published)
-          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)
+          INSERT INTO posts (slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password)
+          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11)
           RETURNING *
         `;
         const insertValues = [
@@ -185,13 +189,15 @@ export default async function handler(req, res) {
           cover || '', 
           JSON.stringify(tagsArray), 
           status || 'published', 
-          published !== false
+          published !== false,
+          is_encrypted || false,
+          access_password || ''
         ];
         result = await pool.query(insertQuery, insertValues);
       } else {
         result = await sql`
-          INSERT INTO posts (slug, title, summary, content, location, cover, tags, status, published)
-          VALUES (${slug || null}, ${title}, ${summary || ''}, ${content}, ${location || ''}, ${cover || ''}, ${JSON.stringify(tagsArray)}::jsonb, ${status || 'published'}, ${published !== false})
+          INSERT INTO posts (slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password)
+          VALUES (${slug || null}, ${title}, ${summary || ''}, ${content}, ${location || ''}, ${cover || ''}, ${JSON.stringify(tagsArray)}::jsonb, ${status || 'published'}, ${published !== false}, ${is_encrypted || false}, ${access_password || ''})
           RETURNING *
         `;
       }
@@ -205,7 +211,7 @@ export default async function handler(req, res) {
 
     // PUT - 更新文章
     if (req.method === 'PUT') {
-      const { id, slug, title, summary, content, location, cover, tags, status, published } = req.body;
+      const { id, slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password } = req.body;
 
       if (!id) {
         return res.status(400).json({
@@ -271,6 +277,14 @@ export default async function handler(req, res) {
         updateParts.push(`published = $${paramIndex++}`);
         updateValues.push(published);
       }
+      if (is_encrypted !== undefined) {
+        updateParts.push(`is_encrypted = $${paramIndex++}`);
+        updateValues.push(is_encrypted);
+      }
+      if (access_password !== undefined) {
+        updateParts.push(`access_password = $${paramIndex++}`);
+        updateValues.push(access_password || '');
+      }
       updateParts.push(`updated_at = CURRENT_TIMESTAMP`);
       
       // 添加 id 参数
@@ -332,6 +346,14 @@ export default async function handler(req, res) {
               newUpdateParts.push(`published = $${newParamIndex++}`);
               newUpdateValues.push(published);
             }
+            if (is_encrypted !== undefined) {
+              newUpdateParts.push(`is_encrypted = $${newParamIndex++}`);
+              newUpdateValues.push(is_encrypted);
+            }
+            if (access_password !== undefined) {
+              newUpdateParts.push(`access_password = $${newParamIndex++}`);
+              newUpdateValues.push(access_password || '');
+            }
             newUpdateParts.push(`updated_at = CURRENT_TIMESTAMP`);
             newUpdateValues.push(id);
             
@@ -377,6 +399,12 @@ export default async function handler(req, res) {
         }
         if (published !== undefined) {
           setParts.push(`published = ${sql`${published}`}`);
+        }
+        if (is_encrypted !== undefined) {
+          setParts.push(`is_encrypted = ${sql`${is_encrypted}`}`);
+        }
+        if (access_password !== undefined) {
+          setParts.push(`access_password = ${sql`${access_password || ''}`}`);
         }
         setParts.push('updated_at = CURRENT_TIMESTAMP');
         

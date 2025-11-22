@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS posts (
   tags JSONB DEFAULT '[]',
   status VARCHAR(20) DEFAULT 'published',
   published BOOLEAN DEFAULT TRUE,
+  is_encrypted BOOLEAN DEFAULT FALSE,
+  access_password VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -31,4 +33,5 @@ CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_published ON posts(published);
 CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug);
 CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
+CREATE INDEX IF NOT EXISTS idx_posts_encrypted ON posts(is_encrypted);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC);
