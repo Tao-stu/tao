@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-input {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .test-output {
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Markdown 功能测试</h1>
+    
+    <div class="test-section">
+        <h2>测试 1: 基本语法</h2>
+        <div class="test-input"># 标题测试
+这是一个段落，包含`行内代码`和**粗体文本**。
+
+## 代码块测试
+
+```javascript
+function hello() {
+  console.log('Hello World');
+}
+```
+
+## 列表测试
+- 项目1
+- 项目2
+- 项目3</div>
+        <div class="test-output" id="output1"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>测试 2: HTML 标签处理</h2>
+        <div class="test-input"><div class='test'>
+  <p>这是一个HTML段落</p>
+</div>
+
+<script type='text/javascript'>
+const x = 10;
+console.log(x);
+</script>
+
+<style>
+.test { color: red; }
+</style></div>
+        <div class="test-output" id="output2"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>测试 3: 复杂内容</h2>
+        <div class="test-input"># 复杂测试
+
+## 表格
+| 列1 | 列2 | 列3 |
+|-----|-----|-----|
+| A   | B   | C   |
+| 1   | 2   | 3   |
+
+## 链接和图片
+[链接文本](https://example.com)
+
+## 引用
+> 这是一段引用
+> 可以有多行</div>
+        <div class="test-output" id="output3"></div>
+    </div>
+
+    <script type="module">
+        // 简单测试脚本，模拟 markdown 渲染
+        console.log('Markdown 测试页面已加载');
+        
+        // 模拟一些基本的 markdown 转换
+        function simpleMarkdownToHtml(markdown) {
+            return markdown
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/`(.+?)`/g, '<code>$1</code>')
+                .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+                .replace(/^- (.+)$/gim, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/^/, '<p>')
+                .replace(/$/, '</p>');
+        }
+        
+        // 测试基本功能
+        document.getElementById('output1').innerHTML = simpleMarkdownToHtml(document.querySelector('#output1').previousElementSibling.textContent);
+        document.getElementById('output2').innerHTML = simpleMarkdownToHtml(document.querySelector('#output2').previousElementSibling.textContent);
+        document.getElementById('output3').innerHTML = simpleMarkdownToHtml(document.querySelector('#output3').previousElementSibling.textContent);
+    </script>
+</body>
+</html>
