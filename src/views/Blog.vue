@@ -63,7 +63,7 @@
         <article 
           v-for="(article, index) in displayedArticles" 
           :key="article.id || index"
-          class="group relative glass-effect rounded-3xl p-6 md:p-8 lg:p-10 card-hover overflow-hidden"
+          class="group relative glass-effect rounded-2xl p-4 md:p-5 lg:p-6 card-hover overflow-hidden"
         >
           <!-- 装饰性渐变边框 -->
           <div class="absolute inset-0 rounded-3xl bg-gradient-to-r from-tokyo-night-blue/20 to-tokyo-night-cyan/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -71,10 +71,10 @@
           <!-- 文章内容 -->
           <div class="relative z-10">
           <!-- 标题和加密标识 -->
-          <div class="flex items-start gap-3 mb-3 md:mb-4">
+          <div class="flex items-start gap-2 mb-2 md:mb-3">
             <h2 
-              class="text-xl md:text-2xl lg:text-3xl font-bold text-tokyo-night-cyan hover:text-tokyo-night-blue transition-colors cursor-pointer flex-1"
-              @click="toggleArticle(article.id)"
+              class="text-lg md:text-xl lg:text-2xl font-bold text-tokyo-night-cyan hover:text-tokyo-night-blue transition-colors cursor-pointer flex-1"
+              @click="goToArticle(article)"
             >
               {{ article.title }}
             </h2>
@@ -88,7 +88,7 @@
           </div>
           
           <!-- 发布时间和标签 -->
-          <div class="flex flex-wrap items-center gap-3 md:gap-4 mb-4 md:mb-6 text-xs md:text-sm text-tokyo-night-dark5">
+          <div class="flex flex-wrap items-center gap-2 md:gap-3 mb-3 md:mb-4 text-xs md:text-sm text-tokyo-night-dark5">
             <span class="flex items-center gap-2">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
@@ -114,40 +114,26 @@
           </div>
           
           <!-- 正文预览 -->
-          <div v-if="article.summary" class="prose prose-base md:prose-lg max-w-none text-tokyo-night-fg leading-relaxed">
-            <p class="text-sm md:text-base">{{ article.summary }}</p>
+          <div v-if="article.summary" class="prose prose-sm md:prose-base max-w-none text-tokyo-night-fg leading-relaxed">
+            <p class="text-xs md:text-sm">{{ article.summary }}</p>
           </div>
           
-          <!-- 阅读更多按钮 -->
-          <div class="mt-6 flex justify-between items-center">
+          <!-- 阅读详情按钮 -->
+          <div class="mt-4 flex justify-between items-center">
             <div class="flex gap-1 md:gap-2">
               <span v-if="article.reading_time" class="px-2 md:px-3 py-1 text-xs rounded-full bg-tokyo-night-cyan/20 text-tokyo-night-cyan border border-tokyo-night-cyan/30">
                 {{ article.reading_time }} 分钟阅读
               </span>
             </div>
             <button 
-              @click="toggleArticle(article.id)"
-              class="px-4 md:px-6 py-2 bg-gradient-to-r from-tokyo-night-blue to-tokyo-night-cyan text-white rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105 group-hover:scale-110 text-sm md:text-base"
+              @click="goToArticle(article)"
+              class="px-3 md:px-4 py-1.5 bg-gradient-to-r from-tokyo-night-blue to-tokyo-night-cyan text-white rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105 group-hover:scale-110 text-xs md:text-sm"
             >
-              {{ expandedArticles.has(article.id) ? '收起内容 ↑' : (article.is_encrypted ? '解锁阅读 →' : '阅读更多 →') }}
+              {{ article.is_encrypted ? '解锁阅读 →' : '阅读详情 →' }}
             </button>
           </div>
           
-          <!-- 展开的完整内容（毛玻璃面板） -->
-          <transition name="slide-down">
-            <div v-if="expandedArticles.has(article.id)" class="mt-6 pt-6 border-t" :class="isDark ? 'border-tokyo-night-bg-highlight' : 'border-gray-200'">
-              <div class="glass-effect rounded-2xl p-6 md:p-8">
-                <!-- 完整内容（Markdown 渲染） -->
-                <div class="prose prose-lg max-w-none" :class="isDark ? 'prose-invert' : ''">
-                  <MarkdownRenderer 
-                    :markdown="article.content" 
-                    :editable="false"
-                    :show-language-selector="true"
-                  />
-                </div>
-              </div>
-            </div>
-          </transition>
+
           </div>
         </article>
 
@@ -177,22 +163,21 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useScrollAnimation } from '../composables/useScrollAnimation'
 import { useTheme } from '../composables/useTheme'
-import { markdownToHtml } from '../utils/markdown'
-import MarkdownRenderer from '../components/MarkdownRenderer.vue'
+
 
 useScrollAnimation()
 const { isDark } = useTheme()
+const router = useRouter()
 
 const API_URL = '/api/posts'
 const articles = ref([])
 const loading = ref(false)
 const error = ref('')
 const currentPage = ref(1)
-const pageSize = 4
-const expandedArticles = ref(new Set())
-const loadingArticles = ref(new Set())
+const pageSize = 6
 
 const totalPages = computed(() => {
   if (articles.value.length === 0) return 1
@@ -254,72 +239,17 @@ const formatDate = (value) => {
   return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 
-// 切换文章展开状态
-const toggleArticle = async (articleId) => {
-  if (expandedArticles.value.has(articleId)) {
-    // 收起
-    expandedArticles.value.delete(articleId)
+// 跳转到文章页面
+const goToArticle = (article) => {
+  // 优先使用 slug，如果没有 slug 则使用 ID
+  if (article.slug && article.slug !== 'null' && article.slug !== 'undefined') {
+    router.push(`/article/${article.slug}`)
   } else {
-    // 展开 - 如果内容不完整，需要获取完整内容
-    expandedArticles.value.add(articleId)
-    
-    // 检查是否需要获取完整内容（如果内容为空或需要验证）
-    const article = articles.value.find(a => a.id === articleId)
-    if (article && (!article.content || article.content.trim() === '')) {
-      // 内容为空，需要获取完整内容
-      await fetchFullArticle(articleId, article)
-    }
+    router.push(`/article/?id=${article.id}`)
   }
 }
 
-// 获取完整文章内容
-const fetchFullArticle = async (articleId, article) => {
-  if (loadingArticles.value.has(articleId)) return
-  
-  try {
-    loadingArticles.value.add(articleId)
-    
-    // 优先使用 ID，如果没有 ID 且有 slug 则使用 slug
-    let url = ''
-    if (article.id) {
-      url = `${API_URL}?id=${article.id}`
-    } else if (article.slug) {
-      url = `${API_URL}?slug=${encodeURIComponent(article.slug)}`
-    } else {
-      console.error('无法获取文章：缺少 ID 和 slug', article)
-      return
-    }
-    
-    const response = await fetch(url)
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const result = await response.json()
-    if (result.success && result.data) {
-      // 更新文章内容
-      const index = articles.value.findIndex(a => a.id === articleId)
-      if (index !== -1) {
-        articles.value[index] = { ...articles.value[index], ...result.data }
-      }
-    }
-  } catch (err) {
-    console.error('获取完整文章内容失败:', err)
-  } finally {
-    loadingArticles.value.delete(articleId)
-  }
-}
 
-// 格式化内容（使用专业的 Markdown 解析器）
-const formatContent = (content) => {
-  if (!content) return ''
-  // 确保 content 是字符串
-  if (typeof content !== 'string') {
-    console.warn('[Blog] formatContent: content 不是字符串', typeof content, content)
-    content = String(content || '')
-  }
-  return markdownToHtml(content)
-}
 </script>
 
 <style scoped>
@@ -389,19 +319,6 @@ const formatContent = (content) => {
   border-color: rgba(125, 207, 255, 0.3);
 }
 
-/* 下拉展开动画 */
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: all 0.3s ease-out;
-  max-height: 5000px;
-  opacity: 1;
-}
 
-.slide-down-enter-from,
-.slide-down-leave-to {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-}
 </style>
 

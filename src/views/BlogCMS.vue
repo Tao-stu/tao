@@ -333,6 +333,7 @@
                     <input 
                       type="file" 
                       ref="backupFile"
+                      @change="onFileSelect"
                       accept=".sql"
                       class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium"
                       :class="isDark 
@@ -1059,13 +1060,7 @@ const handleBackup = async () => {
       responseType: 'blob' // 重要：设置响应类型为blob以处理文件下载
     })
     
-    // 创建下载链接
-    const blob = new Blob([response.data], { type: 'application/sql' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    
-    // 从响应头获取文件名，如果没有则使用默认名称
+    // 直接使用window.open下载文件，避免blob URL的安全警告
     const contentDisposition = response.headers['content-disposition']
     let filename = `backup_${new Date().toISOString().split('T')[0]}.sql`
     
@@ -1076,11 +1071,21 @@ const handleBackup = async () => {
       }
     }
     
+    // 创建下载链接
+    const blob = new Blob([response.data], { type: 'application/sql' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
     link.setAttribute('download', filename)
+    link.style.display = 'none'
     document.body.appendChild(link)
     link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
+    
+    // 清理
+    setTimeout(() => {
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    }, 100)
     
     backupSuccess.value = `数据备份成功！文件已下载为 ${filename}`
     
@@ -1150,6 +1155,17 @@ const handleRestore = async () => {
     }
   } finally {
     isRestoring.value = false
+  }
+}
+
+// 文件选择处理
+const onFileSelect = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    console.log('选择了文件:', file.name)
+    // 清除之前的错误和成功消息
+    restoreError.value = ''
+    restoreSuccess.value = ''
   }
 }
 

@@ -226,10 +226,10 @@ const parsedParts = computed(() => {
 }
 
 /* 引用 */
-.markdown-content :deep(blockquote) {
+.dark .markdown-content :deep(blockquote) {
   font-weight: 500;
   font-style: italic;
-  color: inherit;
+  color: #a9b1d6;
   border-left-width: 0.25rem;
   border-left-color: rgba(122, 162, 247, 0.5);
   quotes: "\201C""\201D""\2018""\2019";
@@ -238,15 +238,37 @@ const parsedParts = computed(() => {
   padding-left: 1em;
 }
 
+.light .markdown-content :deep(blockquote) {
+  font-weight: 500;
+  font-style: italic;
+  color: #6b7280;
+  border-left-width: 0.25rem;
+  border-left-color: rgba(37, 99, 235, 0.3);
+  quotes: "\201C""\201D""\2018""\2019";
+  margin-top: 1.6em;
+  margin-bottom: 1.6em;
+  padding-left: 1em;
+}
+
 /* 链接 */
-.markdown-content :deep(a) {
+.dark .markdown-content :deep(a) {
   color: #7aa2f7;
   text-decoration: underline;
   font-weight: 500;
 }
 
-.markdown-content :deep(a:hover) {
+.dark .markdown-content :deep(a:hover) {
   color: #7dcfff;
+}
+
+.light .markdown-content :deep(a) {
+  color: #2563eb;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.light .markdown-content :deep(a:hover) {
+  color: #1d4ed8;
 }
 
 /* 图片 */
@@ -257,7 +279,7 @@ const parsedParts = computed(() => {
 }
 
 /* 表格 */
-.markdown-content :deep(table) {
+.dark .markdown-content :deep(table) {
   width: 100%;
   table-layout: auto;
   text-align: left;
@@ -267,13 +289,13 @@ const parsedParts = computed(() => {
   line-height: 1.7142857;
 }
 
-.markdown-content :deep(thead) {
+.dark .markdown-content :deep(thead) {
   border-bottom-width: 1px;
   border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
-.markdown-content :deep(thead th) {
-  color: inherit;
+.dark .markdown-content :deep(thead th) {
+  color: #c0caf5;
   font-weight: 600;
   vertical-align: bottom;
   padding-right: 0.5714286em;
@@ -281,12 +303,49 @@ const parsedParts = computed(() => {
   padding-left: 0.5714286em;
 }
 
-.markdown-content :deep(tbody tr) {
+.dark .markdown-content :deep(tbody tr) {
   border-bottom-width: 1px;
   border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
-.markdown-content :deep(tbody td) {
+.dark .markdown-content :deep(tbody td) {
+  vertical-align: baseline;
+  padding-top: 0.5714286em;
+  padding-right: 0.5714286em;
+  padding-bottom: 0.5714286em;
+  padding-left: 0.5714286em;
+}
+
+.light .markdown-content :deep(table) {
+  width: 100%;
+  table-layout: auto;
+  text-align: left;
+  margin-top: 2em;
+  margin-bottom: 2em;
+  font-size: 0.875em;
+  line-height: 1.7142857;
+}
+
+.light .markdown-content :deep(thead) {
+  border-bottom-width: 1px;
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+
+.light .markdown-content :deep(thead th) {
+  color: #1f2937;
+  font-weight: 600;
+  vertical-align: bottom;
+  padding-right: 0.5714286em;
+  padding-bottom: 0.5714286em;
+  padding-left: 0.5714286em;
+}
+
+.light .markdown-content :deep(tbody tr) {
+  border-bottom-width: 1px;
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+
+.light .markdown-content :deep(tbody td) {
   vertical-align: baseline;
   padding-top: 0.5714286em;
   padding-right: 0.5714286em;
@@ -295,8 +354,15 @@ const parsedParts = computed(() => {
 }
 
 /* 水平线 */
-.markdown-content :deep(hr) {
+.dark .markdown-content :deep(hr) {
   border-color: rgba(255, 255, 255, 0.1);
+  border-top-width: 1px;
+  margin-top: 3em;
+  margin-bottom: 3em;
+}
+
+.light .markdown-content :deep(hr) {
+  border-color: rgba(0, 0, 0, 0.1);
   border-top-width: 1px;
   margin-top: 3em;
   margin-bottom: 3em;
@@ -312,10 +378,20 @@ const parsedParts = computed(() => {
 }
 
 /* 行内代码样式 */
-.markdown-content :deep(:not(pre) > code) {
+.dark .markdown-content :deep(:not(pre) > code) {
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
   background-color: rgba(110, 118, 129, 0.4);
+  color: #e5e7eb;
+  font-size: 0.875em;
+  font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.light .markdown-content :deep(:not(pre) > code) {
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  background-color: rgba(229, 231, 235, 0.8);
+  color: #374151;
   font-size: 0.875em;
   font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
 }

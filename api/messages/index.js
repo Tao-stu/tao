@@ -13,6 +13,7 @@ export default async function handler(req, res) {
   }
 
   // 对于需要认证的操作（PUT, DELETE），验证 token
+  // GET和POST允许公开访问（查看和提交留言）
   if (['PUT', 'DELETE'].includes(req.method)) {
     const authResult = authenticateRequest(req);
     if (!authResult) {

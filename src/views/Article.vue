@@ -1,5 +1,5 @@
 <template>
-  <div class="pt-28 pb-12 min-h-screen" :class="isDark ? 'dark' : 'light'" style="font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;">
+  <div class="pt-28 pb-12 min-h-screen" :class="isDark ? 'dark tokyo-night-bg' : 'light light-bg'" style="font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;">
     <div class="container mx-auto px-4">
       <!-- 返回按钮 -->
       <div class="mb-6">
@@ -34,7 +34,7 @@
       <div v-else-if="error" class="max-w-4xl mx-auto">
         <div class="glass-effect rounded-3xl p-8 text-center" :class="isDark ? 'dark' : 'light'">
           <div class="text-6xl mb-4">😕</div>
-          <h2 class="text-2xl font-bold mb-4" :class="isDark ? 'text-white' : 'text-gray-800'">
+          <h2 class="text-2xl font-bold mb-4" :class="isDark ? 'text-tokyo-night-fg' : 'text-gray-800'">
             {{ error }}
           </h2>
           <button 
@@ -50,7 +50,7 @@
 
       <!-- 文章内容 -->
       <article v-if="article" class="max-w-4xl mx-auto">
-        <div class="glass-effect rounded-3xl p-6 md:p-8 lg:p-12 shadow-2xl">
+        <div class="glass-effect rounded-3xl p-6 md:p-8 lg:p-12 shadow-2xl" :class="isDark ? 'dark' : 'light'">
           <!-- 文章头部 -->
           <header class="mb-8">
             <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-tokyo-night-cyan">
@@ -95,13 +95,13 @@
 
           <!-- 文章摘要 -->
           <div v-if="article.summary" class="mb-8 p-4 rounded-lg" :class="isDark ? 'bg-tokyo-night-bg-highlight' : 'bg-gray-50'">
-            <p class="text-lg italic" :class="isDark ? 'text-gray-300' : 'text-gray-600'">
+            <p class="text-lg italic" :class="isDark ? 'text-tokyo-night-fg' : 'text-gray-700'">
               {{ article.summary }}
             </p>
           </div>
 
           <!-- 文章内容 -->
-          <div class="prose prose-lg max-w-none" :class="isDark ? 'prose-invert' : ''">
+          <div class="prose prose-lg max-w-none" :class="isDark ? 'prose-invert prose-headings:text-tokyo-night-cyan prose-p:text-tokyo-night-fg prose-strong:text-tokyo-night-cyan prose-code:text-tokyo-night-cyan' : 'prose-headings:text-blue-600 prose-p:text-gray-700 prose-strong:text-blue-600 prose-code:text-blue-600'">
             <MarkdownRenderer 
               :markdown="article.content" 
               :editable="false"
@@ -117,12 +117,12 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useDark } from '@vueuse/core'
+import { useTheme } from '../composables/useTheme'
 import { markdownToHtml } from '../utils/markdown'
 import MarkdownRenderer from '../components/MarkdownRenderer.vue'
 
 // 响应式数据
-const isDark = useDark()
+const { isDark } = useTheme()
 const route = useRoute()
 const loading = ref(true)
 const error = ref('')

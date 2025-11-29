@@ -57,137 +57,68 @@
         />
       </div>
 
-      <!-- 可选字段 -->
-      <div class="space-y-4">
-        <!-- 可选字段开关 -->
-        <div class="flex items-center gap-3">
-          <input 
-            type="checkbox" 
-            id="showOptionalFields"
-            v-model="showOptionalFields"
-            class="w-4 h-4 text-tokyo-night-blue rounded focus:ring-tokyo-night-blue"
-          />
-          <label for="showOptionalFields" class="text-sm font-medium transition-colors cursor-pointer"
-                 :class="isDark ? 'text-white' : 'text-gray-800'">
-            可选字段（别名、地点、封面图）
-          </label>
-        </div>
-
-        <!-- 可选字段内容 -->
-        <div v-if="showOptionalFields" class="space-y-4 pl-7 border-l-2 border-tokyo-night-blue/20">
-          <!-- 文章别名 -->
-          <div>
-            <label class="block text-sm font-medium mb-2 transition-colors" 
-                   :class="isDark ? 'text-white' : 'text-gray-800'">
-              文章别名 (URL)
-            </label>
-            <input 
-              type="text" 
-              v-model="formData.slug"
-              placeholder="article-url-slug"
-              class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              :class="isDark 
-                ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-            />
-          </div>
-
-          <!-- 地点 -->
-          <div>
-            <label class="block text-sm font-medium mb-2 transition-colors" 
-                   :class="isDark ? 'text-white' : 'text-gray-800'">
-              地点
-            </label>
-            <input 
-              type="text" 
-              v-model="formData.location"
-              placeholder="文章相关地点（可选）"
-              class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              :class="isDark 
-                ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-            />
-          </div>
-
-          <!-- 封面图片 -->
-          <div>
-            <label class="block text-sm font-medium mb-2 transition-colors" 
-                   :class="isDark ? 'text-white' : 'text-gray-800'">
-              封面图片URL
-            </label>
-            <input 
-              type="url" 
-              v-model="formData.cover"
-              placeholder="https://example.com/image.jpg"
-              class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              :class="isDark 
-                ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-            />
-          </div>
-        </div>
+      <!-- 文章内容 -->
+      <div>
+        <label class="block text-sm font-medium mb-2 transition-colors" 
+               :class="isDark ? 'text-white' : 'text-gray-800'">
+          文章内容 *
+        </label>
+        <textarea 
+          v-model="formData.content"
+          required
+          placeholder="输入文章内容..."
+          rows="10"
+          class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-vertical"
+          :class="isDark 
+            ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
+            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
+        ></textarea>
       </div>
 
-      <!-- 标签和摘要放在一行 -->
+      <!-- 文章别名和标签 -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- 文章摘要 -->
+        <!-- 文章别名 -->
         <div>
           <label class="block text-sm font-medium mb-2 transition-colors" 
                  :class="isDark ? 'text-white' : 'text-gray-800'">
-            文章摘要
+            文章别名
           </label>
-          <textarea 
-            v-model="formData.summary"
-            rows="1"
-            placeholder="输入文章摘要（可选）"
-            class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+          <input 
+            type="text" 
+            v-model="formData.slug"
+            placeholder="自动生成或手动输入别名"
+            class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
             :class="isDark 
               ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
               : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-          ></textarea>
+          />
+          <p class="mt-1 text-xs transition-colors" 
+             :class="isDark ? 'text-gray-400' : 'text-gray-500'">
+            用于URL路径，留空将自动生成
+          </p>
         </div>
 
         <!-- 标签 -->
         <div>
           <label class="block text-sm font-medium mb-2 transition-colors" 
                  :class="isDark ? 'text-white' : 'text-gray-800'">
-            标签 (用逗号分隔)
+            标签
           </label>
           <input 
             type="text" 
             v-model="tagsInput"
-            placeholder="Vue3, JavaScript, 前端开发"
+            placeholder="输入标签，用逗号分隔"
             class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
             :class="isDark 
               ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
               : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
           />
-        </div>
-      </div>
-
-
-
-      <!-- 正文内容 -->
-      <div>
-        <label class="block text-sm font-medium mb-2 transition-colors" 
-               :class="isDark ? 'text-white' : 'text-gray-800'">
-          正文内容 
-        </label>
-        <div class="border rounded-lg transition-colors" 
-             :class="isDark ? 'border-tokyo-night-blue' : 'border-gray-300'">
-          <textarea 
-            ref="editorTextarea"
-            v-model="formData.content"
-            @keydown="handleKeyDown"
-            @input="handleInput"
-            rows="20"
-            placeholder="在这里使用 Markdown 语法编写文章内容..."
-            class="w-full p-4 resize-none focus:outline-none transition-colors rounded-lg"
-            style="font-family: 'Microsoft YaHei', '微软雅黑', sans-serif; font-size: 14px; line-height: 1.6;"
-            :class="isDark 
-              ? 'bg-tokyo-night-bg text-white placeholder-gray-400' 
-              : 'bg-white text-gray-900 placeholder-gray-500'"
-          ></textarea>
+          <div v-if="formData.tags.length > 0" class="mt-2 flex flex-wrap gap-2">
+            <span v-for="tag in formData.tags" :key="tag" 
+                  class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+              {{ tag }}
+            </span>
+          </div>
         </div>
       </div>
     </form>
@@ -195,7 +126,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, watch } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { markdownToHtml } from '../utils/markdown'
 
@@ -231,9 +162,21 @@ const formData = ref({
 
 const tagsInput = ref('')
 
-
-
-
+// 方法定义（必须在watch之前，避免初始化错误）
+const resetForm = () => {
+  formData.value = {
+    title: '',
+    slug: '',
+    summary: '',
+    content: '',
+    location: '',
+    cover: '',
+    tags: [],
+    status: 'draft'
+  }
+  tagsInput.value = ''
+  showOptionalFields.value = false
+}
 
 // 监听器
 watch(() => props.post, (newPost) => {
@@ -297,24 +240,6 @@ watch(tagsInput, (newValue) => {
 })
 
 // 方法
-const resetForm = () => {
-  formData.value = {
-    title: '',
-    slug: '',
-    summary: '',
-    content: '',
-    location: '',
-    cover: '',
-    tags: [],
-    status: 'draft'
-  }
-  tagsInput.value = ''
-  showOptionalFields.value = false
-}
-
-
-
-
 
 const generateSlug = (title) => {
   return title
@@ -348,258 +273,77 @@ const validateForm = () => {
   return errors
 }
 
-// HTML转义函数（已取消转义）
-const escapeHtml = (text) => {
-  // 完全取消HTML转义，管理员可信任
-  return text || ''
-}
-
-// 处理内容，保留Markdown语法但不转义HTML标签
-const sanitizeContent = (content) => {
-  if (!content) return content
-  
-  // 由于只有管理员能写文章，不进行HTML转义
-  // 直接返回原始内容
-  return content
-}
-
 const saveDraft = () => {
   console.log('[BlogEditor] saveDraft 开始执行', {
-    formData: {
-      title: formData.value.title,
-      slug: formData.value.slug,
-      contentLength: formData.value.content?.length || 0,
-      tags: formData.value.tags
-    }
+    title: formData.value.title,
+    contentLength: formData.value.content?.length || 0,
+    tags: formData.value.tags,
+    status: 'draft'
   })
   
-  // 验证表单（草稿模式允许标题或内容为空）
   const errors = validateForm()
-  if (errors.length > 0 && formData.value.title.trim() === '' && formData.value.content.trim() === '') {
-    alert(errors.join('\n'))
+  if (errors.length > 0) {
+    alert('表单验证失败：\n' + errors.join('\n'))
     return
   }
   
-  const data = { 
-    ...formData.value, 
-    status: 'draft',
-    content: sanitizeContent(formData.value.content)
+  // 自动生成 slug（如果为空）
+  let finalSlug = formData.value.slug
+  if (!finalSlug || finalSlug.trim() === '') {
+    finalSlug = generateSlug(formData.value.title)
   }
-  const originalSlug = data.slug
   
-  if (!data.slug && data.title) {
-    data.slug = generateSlug(data.title)
-    console.log('[BlogEditor] 自动生成 slug', {
-      title: data.title,
-      generatedSlug: data.slug
-    })
+  const postData = {
+    ...formData.value,
+    slug: finalSlug,
+    published: false,
+    status: 'draft'
   }
   
   console.log('[BlogEditor] 发送保存草稿事件', {
-    originalSlug,
-    finalSlug: data.slug,
-    data: {
-      ...data,
-      contentLength: data.content?.length || 0
-    }
+    originalSlug: formData.value.slug,
+    finalSlug: finalSlug,
+    data: postData
   })
   
-  emit('save', data)
+  emit('save', postData)
 }
 
 const publish = () => {
   console.log('[BlogEditor] publish 开始执行', {
-    formData: {
-      title: formData.value.title,
-      slug: formData.value.slug,
-      contentLength: formData.value.content?.length || 0,
-      tags: formData.value.tags
-    }
+    formData: formData.value
   })
   
-  // 发布前必须验证表单
   const errors = validateForm()
   if (errors.length > 0) {
-    alert(errors.join('\n'))
+    alert('表单验证失败：\n' + errors.join('\n'))
     return
   }
   
-  const data = { 
-    ...formData.value, 
-    status: 'published',
-    content: sanitizeContent(formData.value.content)
+  // 自动生成 slug（如果为空）
+  let finalSlug = formData.value.slug
+  if (!finalSlug || finalSlug.trim() === '') {
+    finalSlug = generateSlug(formData.value.title)
   }
-  const originalSlug = data.slug
   
-  if (!data.slug && data.title) {
-    data.slug = generateSlug(data.title)
-    console.log('[BlogEditor] 自动生成 slug', {
-      title: data.title,
-      generatedSlug: data.slug
-    })
+  console.log('[BlogEditor] 自动生成 slug', {
+    title: formData.value.title,
+    generatedSlug: finalSlug
+  })
+  
+  const postData = {
+    ...formData.value,
+    slug: finalSlug,
+    published: true,
+    status: 'published'
   }
   
   console.log('[BlogEditor] 发送发布事件', {
-    originalSlug,
-    finalSlug: data.slug,
-    data: {
-      ...data,
-      contentLength: data.content?.length || 0
-    }
+    originalSlug: formData.value.slug,
+    finalSlug: finalSlug,
+    data: postData
   })
   
-  emit('save', data)
+  emit('save', postData)
 }
-
-// 处理键盘事件（自动缩进）
-const handleKeyDown = (event) => {
-  const textarea = event.target
-  const start = textarea.selectionStart
-  const end = textarea.selectionEnd
-  
-  // Tab 键：插入 2 个空格（自动缩进）
-  if (event.key === 'Tab') {
-    event.preventDefault()
-    
-    const beforeCursor = formData.value.content.substring(0, start)
-    const afterCursor = formData.value.content.substring(end)
-    
-    // 如果按 Shift+Tab，减少缩进
-    if (event.shiftKey) {
-      // 查找当前行的开始位置
-      const lineStart = beforeCursor.lastIndexOf('\n') + 1
-      const currentLine = beforeCursor.substring(lineStart)
-      
-      // 如果行首有 2 个空格，删除它们
-      if (currentLine.startsWith('  ')) {
-        const newStart = start - 2
-        formData.value.content = formData.value.content.substring(0, lineStart) + 
-                          currentLine.substring(2) + 
-                          afterCursor
-        setTimeout(() => {
-          textarea.setSelectionRange(newStart, newStart)
-        }, 10)
-      }
-    } else {
-      // 普通 Tab：插入 2 个空格
-      const indent = '  '
-      formData.value.content = beforeCursor + indent + afterCursor
-      setTimeout(() => {
-        textarea.setSelectionRange(start + indent.length, start + indent.length)
-      }, 10)
-    }
-  }
-  
-  // Enter 键：自动继承上一行的缩进（在默认行为之后处理）
-  if (event.key === 'Enter') {
-    // 不阻止默认行为，让换行先发生
-    setTimeout(() => {
-      const newStart = textarea.selectionStart
-      const beforeCursor = formData.value.content.substring(0, newStart - 1) // -1 因为已经插入了换行
-      const lineStart = beforeCursor.lastIndexOf('\n') + 1
-      const currentLine = beforeCursor.substring(lineStart)
-      
-      // 计算上一行的前导空格
-      const indentMatch = currentLine.match(/^(\s*)/)
-      if (indentMatch) {
-        const indent = indentMatch[1]
-        
-        // 如果上一行以某些字符结尾，可能需要额外缩进
-        const trimmedLine = currentLine.trim()
-        const needsExtraIndent = /[{\[(:]$/.test(trimmedLine)
-        
-        // 在当前位置插入缩进
-        const afterCursor = formData.value.content.substring(newStart)
-        const newIndent = indent + (needsExtraIndent ? '  ' : '')
-        const indentLength = newIndent.length
-        formData.value.content = formData.value.content.substring(0, newStart) + newIndent + afterCursor
-        
-        // 设置光标位置
-        setTimeout(() => {
-          textarea.setSelectionRange(newStart + indentLength, newStart + indentLength)
-        }, 10)
-      }
-    }, 0)
-  }
-}
-
-// 处理输入事件（用于其他自动格式化）
-const handleInput = (event) => {
-  // 可以在这里添加其他自动格式化逻辑
-}
-
-
-
-
-
-
-
-// 生命周期
-onMounted(() => {
-  resetForm()
-})
 </script>
-
-<style scoped>
-/* 自定义样式 */
-.prose h1, .prose h2, .prose h3 {
-  @apply font-bold mb-4;
-}
-
-.prose h1 {
-  @apply text-2xl;
-}
-
-.prose h2 {
-  @apply text-xl;
-}
-
-.prose h3 {
-  @apply text-lg;
-}
-
-.prose p {
-  @apply mb-4 leading-relaxed;
-}
-
-.prose ul {
-  @apply mb-4;
-}
-
-.prose li {
-  @apply mb-2;
-}
-
-.prose blockquote {
-  @apply my-4;
-}
-
-.prose hr {
-  @apply my-6;
-}
-
-.prose a {
-  @apply text-blue-600 hover:text-blue-800 underline;
-}
-
-.prose img {
-  @apply my-4;
-}
-
-.prose pre {
-  @apply my-4;
-}
-
-.prose code {
-  @apply text-sm;
-}
-
-/* 复选框样式 */
-input[type="checkbox"]:checked {
-  @apply bg-tokyo-night-blue border-tokyo-night-blue;
-}
-
-input[type="checkbox"]:focus {
-  @apply ring-2 ring-tokyo-night-blue ring-offset-2;
-}
-</style>

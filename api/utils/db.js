@@ -17,9 +17,14 @@ export async function getDatabaseClient() {
   const isPooledConnection = connectionString.includes('?pgbouncer=true') || 
                              connectionString.includes('&pgbouncer=true');
   
+  // 检查是否是本地数据库
+  const isLocalDatabase = connectionString.includes('@localhost:') ||
+                          process.env.NODE_ENV === 'development';
+  
   console.log('数据库连接检测:', {
     isPrismaPostgres,
     isPooledConnection,
+    isLocalDatabase,
     hasNonPooling: !!process.env.POSTGRES_URL_NON_POOLING
   });
   
@@ -28,12 +33,15 @@ export async function getDatabaseClient() {
     const { default: pg } = await import('pg');
     const { Pool } = pg;
     
+    // 本地数据库不需要SSL
+    const sslConfig = isLocalDatabase ? false : {
+      rejectUnauthorized: false
+    };
+    
     const pool = new Pool({
       connectionString: connectionString,
-      ssl: {
-        rejectUnauthorized: false
-      },
-      max: 1 // Serverless 环境建议使用 1 个连接
+      ssl: sslConfig,
+      max: isLocalDatabase ? 10 : 1 // 本地环境可以支持更多连接
     });
     
     // 创建 sql 模板标签函数

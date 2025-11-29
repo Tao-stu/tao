@@ -1,4 +1,8 @@
-const { sql } = require('@vercel/postgres')
+// 动态导入数据库连接工具
+async function getDatabaseClient() {
+  const { getDatabaseClient } = await import('../utils/db.js');
+  return await getDatabaseClient();
+}
 
 const withCors = (res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -8,6 +12,10 @@ const withCors = (res) => {
 
 // 执行SQL文件内容
 async function executeSqlFile(sqlContent) {
+  // 获取数据库客户端
+  const db = await getDatabaseClient();
+  const sql = db.sql;
+  
   // 移除注释和空行，分割SQL语句
   const cleanSql = sqlContent
     .split('\n')
@@ -58,7 +66,15 @@ async function executeSqlFile(sqlContent) {
     const statement = statements[i];
     try {
       console.log(`执行语句 ${i + 1}/${statements.length}:`, statement.substring(0, 100) + '...');
-      await sql.unsafe(statement);
+      
+      // 使用数据库客户端的query方法执行SQL
+      if (db.query) {
+        await db.query(statement);
+      } else {
+        // 如果没有query方法，使用sql.unsafe
+        await sql.unsafe(statement);
+      }
+      
       results.executedStatements++;
       console.log(`语句 ${i + 1} 执行成功`);
     } catch (error) {
@@ -69,6 +85,11 @@ async function executeSqlFile(sqlContent) {
         error: error.message
       });
     }
+  }
+  
+  // 关闭数据库连接
+  if (db.end) {
+    await db.end();
   }
   
   return results;
