@@ -1138,7 +1138,8 @@ const savePost = async (postData) => {
       status: postData.status,
       summary: postData.summary,
       location: postData.location,
-      cover: postData.cover
+      cover: postData.cover,
+      category_id: postData.category_id
     }
   })
   
@@ -1172,7 +1173,8 @@ const savePost = async (postData) => {
         status: postData.status,
         summary: postData.summary || '',
         location: postData.location || '',
-        cover: postData.cover || ''
+        cover: postData.cover || '',
+        category_id: postData.category_id
       }
       
       console.log('[BlogCMS] 准备更新文章', {
@@ -1214,7 +1216,8 @@ const savePost = async (postData) => {
         status: postData.status,
         summary: postData.summary || '',
         location: postData.location || '',
-        cover: postData.cover || ''
+        cover: postData.cover || '',
+        category_id: postData.category_id
       }
       
       console.log('[BlogCMS] 准备创建文章', {

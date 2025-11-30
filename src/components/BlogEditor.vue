@@ -102,11 +102,10 @@
         <div>
           <label class="block text-sm font-medium mb-2 transition-colors" 
                  :class="isDark ? 'text-white' : 'text-gray-800'">
-            分类 *
+            分类
           </label>
           <select 
             v-model="formData.category_id"
-            required
             class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
             :class="isDark 
               ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white' 
@@ -183,7 +182,7 @@ const formData = ref({
   location: '',
   cover: '',
   tags: [],
-  category_id: 1,
+  category_id: null,
   status: 'draft'
 })
 
@@ -233,7 +232,7 @@ watch(() => props.post, (newPost) => {
       location: newPost.location || '',
       cover: newPost.cover || '',
       tags: Array.isArray(newPost.tags) ? [...newPost.tags] : [],
-      category_id: newPost.category_id || 1,
+      category_id: newPost.category_id || null,
       status: newPost.status || (newPost.published ? 'published' : 'draft')
     }
     tagsInput.value = formData.value.tags.join(', ')

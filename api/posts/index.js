@@ -107,7 +107,7 @@ export default async function handler(req, res) {
             END IF;
             IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                           WHERE table_name='posts' AND column_name='category_id') THEN
-              ALTER TABLE posts ADD COLUMN category_id INTEGER DEFAULT 1;
+              ALTER TABLE posts ADD COLUMN category_id INTEGER;
             END IF;
           END $$;
         `);
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
           { name: 'location', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS location VARCHAR(120)' },
           { name: 'cover', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS cover TEXT' },
           { name: 'summary', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS summary TEXT' },
-          { name: 'category_id', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS category_id INTEGER DEFAULT 1' }
+          { name: 'category_id', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS category_id INTEGER' }
         ];
         
         for (const column of columnsToAdd) {
@@ -467,7 +467,7 @@ export default async function handler(req, res) {
           published !== false,
           is_encrypted || false,
           access_password || '',
-          category_id || 1
+          category_id
         ];
         result = await pool.query(insertQuery, insertValues);
       } else {
