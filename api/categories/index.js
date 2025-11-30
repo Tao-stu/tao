@@ -1,315 +1,191 @@
-// Vercel Serverless Function - 分类管理 API
-import { authenticateRequest } from '../utils/auth.js';
+const { Pool } = require('pg');
+const { authenticate } = require('../utils/auth');
 
-export default async function handler(req, res) {
-  // 设置 CORS 头
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-  // 处理 OPTIONS 预检请求
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  // 对于需要认证的操作（POST, PUT, DELETE），验证 token
-  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
-    const authResult = authenticateRequest(req);
-    if (!authResult) {
-      return res.status(401).json({
-        success: false,
-        error: '未授权，请先登录',
-      });
-    }
-  }
-
+// 获取所有分类及文章数量
+async function getCategories(req, res) {
   try {
-    // 使用统一的数据库连接工具
-    const { getDatabaseClient } = await import('../utils/db.js');
-    const db = await getDatabaseClient();
-    const sql = db.sql;
-    const pool = db.pool;
-
-    // 初始化分类表
-    const createCategoriesTable = async () => {
-      if (pool) {
-        await pool.query(`
-          CREATE TABLE IF NOT EXISTS categories (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL UNIQUE,
-            description TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-      } else {
-        await sql`
-          CREATE TABLE IF NOT EXISTS categories (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL UNIQUE,
-            description TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `;
-      }
-    };
-
-    // 初始化文章分类关联表
-    const createPostCategoriesTable = async () => {
-      if (pool) {
-        await pool.query(`
-          CREATE TABLE IF NOT EXISTS post_categories (
-            id SERIAL PRIMARY KEY,
-            post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-            category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(post_id, category_id)
-          )
-        `);
-      } else {
-        await sql`
-          CREATE TABLE IF NOT EXISTS post_categories (
-            id SERIAL PRIMARY KEY,
-            post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-            category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(post_id, category_id)
-          )
-        `;
-      }
-    };
-
-    // 创建表
-    await createCategoriesTable();
-    await createPostCategoriesTable();
-
-    // 插入默认分类"未分类"
-    const insertDefaultCategory = async () => {
-      try {
-        if (pool) {
-          await pool.query(`
-            INSERT INTO categories (name, description) 
-            VALUES ('未分类', '默认分类，未指定分类的文章将归入此类')
-            ON CONFLICT (name) DO NOTHING
-          `);
-        } else {
-          await sql`
-            INSERT INTO categories (name, description) 
-            VALUES ('未分类', '默认分类，未指定分类的文章将归入此类')
-            ON CONFLICT (name) DO NOTHING
-          `;
-        }
-      } catch (error) {
-        // 忽略插入冲突错误
-        if (!error.message.includes('duplicate')) {
-          console.warn('插入默认分类时出错:', error.message);
-        }
-      }
-    };
-    await insertDefaultCategory();
-
-    // GET - 获取所有分类
-    if (req.method === 'GET') {
-      let result;
-      if (pool) {
-        result = await pool.query(`
-          SELECT * FROM categories 
-          ORDER BY id ASC
-        `);
-      } else {
-        result = await sql`
-          SELECT * FROM categories 
-          ORDER BY id ASC
-        `;
-      }
-      const rows = result.rows || result;
-      
-      return res.status(200).json({
-        success: true,
-        data: rows
+    const client = await pool.connect();
+    
+    // 获取所有文章并统计分类
+    const result = await client.query(`
+      SELECT 
+        category,
+        COUNT(*) as post_count,
+        MIN(created_at) as created_at
+      FROM posts 
+      WHERE category IS NOT NULL AND category != ''
+      GROUP BY category
+      ORDER BY post_count DESC, category ASC
+    `);
+    
+    // 构建分类列表
+    const categories = result.rows.map(row => ({
+      id: `cat_${row.category}`,
+      name: row.category,
+      description: '',
+      created_at: row.created_at,
+      post_count: parseInt(row.post_count)
+    }));
+    
+    // 添加"未分类"统计
+    const uncategorizedResult = await client.query(`
+      SELECT COUNT(*) as post_count
+      FROM posts 
+      WHERE category IS NULL OR category = '' OR category = '未分类'
+    `);
+    
+    const uncategorizedCount = parseInt(uncategorizedResult.rows[0].post_count);
+    
+    // 如果有未分类文章，添加到列表
+    if (uncategorizedCount > 0) {
+      categories.unshift({
+        id: 'cat_uncategorized',
+        name: '未分类',
+        description: '系统默认分类',
+        created_at: new Date().toISOString(),
+        post_count: uncategorizedCount
       });
     }
-
-    // POST - 创建新分类
-    if (req.method === 'POST') {
-      const { name, description } = req.body;
-
-      if (!name || name.trim() === '') {
-        return res.status(400).json({
-          success: false,
-          error: '分类名称不能为空'
-        });
-      }
-
-      let result;
-      if (pool) {
-        result = await pool.query(`
-          INSERT INTO categories (name, description) 
-          VALUES ($1, $2)
-          RETURNING *
-        `, [name.trim(), description || '']);
-      } else {
-        result = await sql`
-          INSERT INTO categories (name, description) 
-          VALUES (${name.trim()}, ${description || ''})
-          RETURNING *
-        `;
-      }
-      const rows = result.rows || result;
-
-      return res.status(201).json({
-        success: true,
-        data: rows[0]
-      });
-    }
-
-    // PUT - 更新分类
-    if (req.method === 'PUT') {
-      const { id, name, description } = req.body;
-
-      if (!id) {
-        return res.status(400).json({
-          success: false,
-          error: '分类ID不能为空'
-        });
-      }
-
-      if (!name || name.trim() === '') {
-        return res.status(400).json({
-          success: false,
-          error: '分类名称不能为空'
-        });
-      }
-
-      let result;
-      if (pool) {
-        result = await pool.query(`
-          UPDATE categories 
-          SET name = $1, description = $2
-          WHERE id = $3
-          RETURNING *
-        `, [name.trim(), description || '', id]);
-      } else {
-        result = await sql`
-          UPDATE categories 
-          SET name = ${name.trim()}, description = ${description || ''}
-          WHERE id = ${id}
-          RETURNING *
-        `;
-      }
-      const rows = result.rows || result;
-
-      if (rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          error: '分类不存在'
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        data: rows[0]
-      });
-    }
-
-    // DELETE - 删除分类
-    if (req.method === 'DELETE') {
-      const { id } = req.query;
-
-      if (!id) {
-        return res.status(400).json({
-          success: false,
-          error: '分类ID不能为空'
-        });
-      }
-
-      // 检查是否是"未分类"默认分类
-      let categoryResult;
-      if (pool) {
-        categoryResult = await pool.query(`
-          SELECT name FROM categories WHERE id = $1
-        `, [id]);
-      } else {
-        categoryResult = await sql`
-          SELECT name FROM categories WHERE id = ${id}
-        `;
-      }
-      const categoryRows = categoryResult.rows || categoryResult;
-
-      if (categoryRows.length > 0 && categoryRows[0].name === '未分类') {
-        return res.status(400).json({
-          success: false,
-          error: '不能删除默认分类"未分类"'
-        });
-      }
-
-      // 删除分类前，将该分类下的文章移到"未分类"
-      const uncategorizedResult = await sql`
-        SELECT id FROM categories WHERE name = '未分类' LIMIT 1
-      `;
-      const uncategorizedRows = uncategorizedResult.rows || uncategorizedResult;
-      
-      if (uncategorizedRows.length > 0) {
-        const uncategorizedId = uncategorizedRows[0].id;
-        
-        if (pool) {
-          await pool.query(`
-            UPDATE post_categories 
-            SET category_id = $1 
-            WHERE category_id = $2
-          `, [uncategorizedId, id]);
-        } else {
-          await sql`
-            UPDATE post_categories 
-            SET category_id = ${uncategorizedId} 
-            WHERE category_id = ${id}
-          `;
-        }
-      }
-
-      // 删除分类
-      let result;
-      if (pool) {
-        result = await pool.query(`
-          DELETE FROM categories WHERE id = $1
-        `, [id]);
-      } else {
-        result = await sql`
-          DELETE FROM categories WHERE id = ${id}
-        `;
-      }
-      const rowCount = result.rowCount || (result.rows ? result.rows.length : 0);
-
-      if (rowCount === 0) {
-        return res.status(404).json({
-          success: false,
-          error: '分类不存在'
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: '分类已删除，相关文章已移至"未分类"'
-      });
-    }
-
-    // 不支持的方法
-    return res.status(405).json({
-      success: false,
-      error: 'Method not allowed'
+    
+    client.release();
+    
+    res.json({
+      success: true,
+      data: categories
     });
-
+    
   } catch (error) {
-    console.error('Categories API Error:', error);
-    
-    let errorMessage = '服务器错误，请稍后再试';
-    if (error.message && error.message.includes('duplicate key')) {
-      errorMessage = '分类名称已存在';
-    }
-    
-    return res.status(500).json({
+    console.error('获取分类失败:', error);
+    res.status(500).json({
       success: false,
-      error: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: '获取分类失败'
     });
   }
 }
+
+// 更新分类名称
+async function updateCategory(req, res) {
+  try {
+    const { oldName, newName } = req.body;
+    
+    if (!oldName || !newName) {
+      return res.status(400).json({
+        success: false,
+        error: '分类名称不能为空'
+      });
+    }
+    
+    if (oldName === '未分类') {
+      return res.status(400).json({
+        success: false,
+        error: '系统默认分类不可修改'
+      });
+    }
+    
+    const client = await pool.connect();
+    
+    // 更新所有使用该分类的文章
+    const result = await client.query(`
+      UPDATE posts 
+      SET category = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE category = $2
+      RETURNING id
+    `, [newName, oldName]);
+    
+    client.release();
+    
+    res.json({
+      success: true,
+      data: {
+        updatedCount: result.rowCount,
+        message: `分类 "${oldName}" 已重命名为 "${newName}"`
+      }
+    });
+    
+  } catch (error) {
+    console.error('更新分类失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '更新分类失败'
+    });
+  }
+}
+
+// 删除分类（将相关文章设为未分类）
+async function deleteCategory(req, res) {
+  try {
+    const { categoryName } = req.body;
+    
+    if (!categoryName) {
+      return res.status(400).json({
+        success: false,
+        error: '分类名称不能为空'
+      });
+    }
+    
+    if (categoryName === '未分类') {
+      return res.status(400).json({
+        success: false,
+        error: '系统默认分类不可删除'
+      });
+    }
+    
+    const client = await pool.connect();
+    
+    // 将使用该分类的文章设为未分类
+    const result = await client.query(`
+      UPDATE posts 
+      SET category = '未分类', updated_at = CURRENT_TIMESTAMP
+      WHERE category = $1
+      RETURNING id
+    `, [categoryName]);
+    
+    client.release();
+    
+    res.json({
+      success: true,
+      data: {
+        updatedCount: result.rowCount,
+        message: `分类 "${categoryName}" 已删除，${result.rowCount} 篇文章已设为未分类`
+      }
+    });
+    
+  } catch (error) {
+    console.error('删除分类失败:', error);
+    res.status(500).json({
+      success: false,
+      error: '删除分类失败'
+    });
+  }
+}
+
+module.exports = async (req, res) => {
+  // 分类管理需要管理员权限
+  const authResult = await authenticate(req);
+  if (!authResult.success) {
+    return res.status(401).json({
+      success: false,
+      error: '需要管理员权限'
+    });
+  }
+  
+  switch (req.method) {
+    case 'GET':
+      return getCategories(req, res);
+    case 'PUT':
+      return updateCategory(req, res);
+    case 'DELETE':
+      return deleteCategory(req, res);
+    default:
+      res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+      res.status(405).json({
+        success: false,
+        error: '方法不被允许'
+      });
+  }
+};

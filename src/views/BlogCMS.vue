@@ -1367,41 +1367,28 @@ const onFileSelect = (event) => {
 const loadCategories = async () => {
   try {
     isLoading.value = true
+    categoryMessage.value = ''
     
-    // 获取所有文章并统计分类
-    const categoryMap = new Map()
-    
-    // 添加默认分类
-    categoryMap.set('未分类', {
-      id: 'default',
-      name: '未分类',
-      description: '系统默认分类',
-      created_at: new Date().toISOString(),
-      post_count: 0
+    const response = await axios.get(`${API_BASE}/categories`, {
+      headers: createAuthHeaders()
     })
     
-    // 统计文章分类
-    blogPosts.value.forEach(post => {
-      const categoryName = post.category || post.tags?.[0] || '未分类'
-      
-      if (!categoryMap.has(categoryName)) {
-        categoryMap.set(categoryName, {
-          id: `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: categoryName,
-          description: '',
-          created_at: post.created_at || new Date().toISOString(),
-          post_count: 0
-        })
-      }
-      
-      categoryMap.get(categoryName).post_count++
-    })
-    
-    categories.value = Array.from(categoryMap.values())
+    if (response.data.success) {
+      categories.value = response.data.data
+      console.log('[BlogCMS] 分类列表加载成功', {
+        count: categories.value.length,
+        categories: categories.value.map(c => ({
+          name: c.name,
+          post_count: c.post_count
+        }))
+      })
+    } else {
+      throw new Error(response.data.error || '加载分类失败')
+    }
     
   } catch (error) {
     console.error('加载分类失败:', error)
-    categoryMessage.value = '加载分类失败，请稍后重试'
+    categoryMessage.value = error.response?.data?.error || '加载分类失败，请稍后重试'
     categoryMessageType.value = 'error'
   } finally {
     isLoading.value = false
@@ -1448,47 +1435,63 @@ const saveCategory = async () => {
     
     if (editingCategory.value) {
       // 更新现有分类
-      const index = categories.value.findIndex(cat => cat.id === editingCategory.value.id)
-      if (index > -1) {
-        categories.value[index] = {
-          ...categories.value[index],
-          name: categoryName,
-          description: categoryForm.value.description.trim()
-        }
-        
-        // 同时更新使用此分类的文章
-        blogPosts.value.forEach(post => {
-          if (post.category === editingCategory.value.name || post.tags?.[0] === editingCategory.value.name) {
-            post.category = categoryName
-            if (post.tags && post.tags.length > 0) {
-              post.tags[0] = categoryName
-            }
-          }
-        })
+      if (editingCategory.value.name === '未分类') {
+        categoryMessage.value = '系统默认分类不可修改'
+        categoryMessageType.value = 'error'
+        return
       }
       
-      categoryMessage.value = `分类 "${categoryName}" 更新成功`
+      const response = await axios.put(`${API_BASE}/categories`, {
+        oldName: editingCategory.value.name,
+        newName: categoryName
+      }, {
+        headers: createAuthHeaders()
+      })
+      
+      if (response.data.success) {
+        categoryMessage.value = response.data.data.message
+        categoryMessageType.value = 'success'
+        
+        // 刷新分类列表和文章列表
+        await loadCategories()
+        await fetchPosts()
+      } else {
+        throw new Error(response.data.error || '更新分类失败')
+      }
     } else {
-      // 添加新分类
+      // 添加新分类（通过创建一篇草稿文章来实现）
       if (categories.value.some(cat => cat.name === categoryName)) {
         categoryMessage.value = '分类已存在'
         categoryMessageType.value = 'error'
         return
       }
       
-      const newCategory = {
-        id: `cat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: categoryName,
-        description: categoryForm.value.description.trim(),
-        created_at: new Date().toISOString(),
-        post_count: 0
+      // 创建一篇临时草稿文章来建立新分类
+      const tempPostData = {
+        title: `[分类] ${categoryName}`,
+        content: `这是分类 "${categoryName}" 的占位文章，可以删除。`,
+        status: 'draft',
+        summary: `分类 ${categoryName} 的占位文章`,
+        tags: [categoryName],
+        slug: `category-${categoryName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`
       }
       
-      categories.value.push(newCategory)
-      categoryMessage.value = `分类 "${categoryName}" 添加成功`
+      const response = await axios.post(`${API_BASE}/posts`, tempPostData, {
+        headers: createAuthHeaders()
+      })
+      
+      if (response.data.success) {
+        categoryMessage.value = `分类 "${categoryName}" 添加成功`
+        categoryMessageType.value = 'success'
+        
+        // 刷新分类列表和文章列表
+        await loadCategories()
+        await fetchPosts()
+      } else {
+        throw new Error(response.data.error || '添加分类失败')
+      }
     }
     
-    categoryMessageType.value = 'success'
     cancelCategoryEdit()
     
     // 3秒后清除消息
@@ -1498,7 +1501,7 @@ const saveCategory = async () => {
     
   } catch (error) {
     console.error('保存分类失败:', error)
-    categoryMessage.value = '保存分类失败，请稍后重试'
+    categoryMessage.value = error.response?.data?.error || '保存分类失败，请稍后重试'
     categoryMessageType.value = 'error'
   } finally {
     isLoading.value = false
@@ -1528,31 +1531,24 @@ const deleteCategory = async (category) => {
 
   try {
     isLoading.value = true
+    categoryMessage.value = ''
     
-    // 从分类列表中移除
-    const index = categories.value.findIndex(cat => cat.id === category.id)
-    if (index > -1) {
-      categories.value.splice(index, 1)
-    }
-    
-    // 更新使用此分类的文章为"未分类"
-    blogPosts.value.forEach(post => {
-      if (post.category === category.name || post.tags?.[0] === category.name) {
-        post.category = '未分类'
-        if (post.tags && post.tags.length > 0) {
-          post.tags[0] = '未分类'
-        }
-      }
+    const response = await axios.delete(`${API_BASE}/categories`, {
+      data: { categoryName: category.name }
+    }, {
+      headers: createAuthHeaders()
     })
     
-    // 更新"未分类"的文章数量
-    const uncategorizedCategory = categories.value.find(cat => cat.name === '未分类')
-    if (uncategorizedCategory) {
-      uncategorizedCategory.post_count += category.post_count
+    if (response.data.success) {
+      categoryMessage.value = response.data.data.message
+      categoryMessageType.value = 'success'
+      
+      // 刷新分类列表和文章列表
+      await loadCategories()
+      await fetchPosts()
+    } else {
+      throw new Error(response.data.error || '删除分类失败')
     }
-    
-    categoryMessage.value = `分类 "${category.name}" 删除成功`
-    categoryMessageType.value = 'success'
     
     // 3秒后清除消息
     setTimeout(() => {
@@ -1561,26 +1557,29 @@ const deleteCategory = async (category) => {
     
   } catch (error) {
     console.error('删除分类失败:', error)
-    categoryMessage.value = '删除分类失败，请稍后重试'
+    categoryMessage.value = error.response?.data?.error || '删除分类失败，请稍后重试'
     categoryMessageType.value = 'error'
   } finally {
     isLoading.value = false
   }
 }
 
-// 监听文章变化，自动加载分类
-watch(blogPosts, () => {
-  if (blogPosts.value.length > 0) {
-    loadCategories()
-  }
-}, { immediate: true })
-
 // 监听activeTab变化，切换到分类时自动加载
 watch(activeTab, (newTab) => {
-  if (newTab === 'categories' && blogPosts.value.length > 0) {
+  if (newTab === 'categories') {
     loadCategories()
   }
 })
+
+// 格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return '未知'
+  return new Date(dateString).toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
 
 
 </script>

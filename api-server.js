@@ -162,6 +162,17 @@ app.all('/api/posts/:slug/content', async (req, res) => {
   }
 })
 
+// 分类API - 支持所有HTTP方法
+app.all('/api/categories', async (req, res) => {
+  try {
+    const categoriesHandler = await import('./api/categories/index.js')
+    return categoriesHandler(req, res)
+  } catch (error) {
+    console.error('Categories API error:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 // 测试API
 app.all('/api/test', async (req, res) => {
   try {
