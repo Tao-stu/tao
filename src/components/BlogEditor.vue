@@ -75,8 +75,8 @@
         ></textarea>
       </div>
 
-      <!-- 文章别名和标签 -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- 文章别名、分类和标签 -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- 文章别名 -->
         <div>
           <label class="block text-sm font-medium mb-2 transition-colors" 
@@ -96,6 +96,31 @@
              :class="isDark ? 'text-gray-400' : 'text-gray-500'">
             用于URL路径，留空将自动生成
           </p>
+        </div>
+
+        <!-- 分类 -->
+        <div>
+          <label class="block text-sm font-medium mb-2 transition-colors" 
+                 :class="isDark ? 'text-white' : 'text-gray-800'">
+            分类 *
+          </label>
+          <select 
+            v-model="formData.category_id"
+            required
+            class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            :class="isDark 
+              ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white' 
+              : 'bg-white border-gray-300 text-gray-900'"
+          >
+            <option value="">选择分类</option>
+            <option 
+              v-for="category in categories" 
+              :key="category.id" 
+              :value="category.id"
+            >
+              {{ category.name }}
+            </option>
+          </select>
         </div>
 
         <!-- 标签 -->
@@ -126,9 +151,10 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { markdownToHtml } from '../utils/markdown'
+import axios from 'axios'
 
 const { isDark } = useTheme()
 
@@ -157,10 +183,12 @@ const formData = ref({
   location: '',
   cover: '',
   tags: [],
+  category_id: 1,
   status: 'draft'
 })
 
 const tagsInput = ref('')
+const categories = ref([])
 
 // 方法定义（必须在watch之前，避免初始化错误）
 const resetForm = () => {
@@ -172,6 +200,7 @@ const resetForm = () => {
     location: '',
     cover: '',
     tags: [],
+    category_id: 1,
     status: 'draft'
   }
   tagsInput.value = ''
@@ -204,6 +233,7 @@ watch(() => props.post, (newPost) => {
       location: newPost.location || '',
       cover: newPost.cover || '',
       tags: Array.isArray(newPost.tags) ? [...newPost.tags] : [],
+      category_id: newPost.category_id || 1,
       status: newPost.status || (newPost.published ? 'published' : 'draft')
     }
     tagsInput.value = formData.value.tags.join(', ')
@@ -238,6 +268,21 @@ watch(tagsInput, (newValue) => {
     .map(tag => tag.trim())
     .filter(tag => tag.length > 0)
 })
+
+// 获取分类列表
+const fetchCategories = async () => {
+  try {
+    const response = await axios.get('/api/categories')
+    if (response.data.success) {
+      categories.value = response.data.data
+    }
+  } catch (error) {
+    console.error('获取分类列表失败:', error)
+  }
+}
+
+// 组件挂载时获取分类列表
+onMounted(fetchCategories)
 
 // 方法
 

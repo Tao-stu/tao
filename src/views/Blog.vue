@@ -45,6 +45,29 @@
         {{ error }}
       </div>
 
+      <!-- 分类筛选 -->
+      <div v-if="!loading" class="max-w-6xl mx-auto mb-6">
+        <div class="glass-effect rounded-2xl p-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium transition-colors" :class="isDark ? 'text-gray-300' : 'text-gray-700'">分类筛选：</span>
+            <button 
+              v-for="category in categories" 
+              :key="category.id"
+              @click="selectedCategory = category.id === selectedCategory ? null : category.id"
+              class="px-3 py-1 text-sm rounded-full transition-all duration-300 border"
+              :class="selectedCategory === category.id 
+                ? 'bg-tokyo-night-blue text-white border-tokyo-night-blue' 
+                : (isDark 
+                  ? 'bg-tokyo-night-bg-highlight text-gray-300 border-tokyo-night-blue/30 hover:bg-tokyo-night-blue/20' 
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100')"
+            >
+              {{ category.name }}
+              <span v-if="category.post_count > 0" class="ml-1 text-xs opacity-75">({{ category.post_count }})</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div v-if="loading" class="max-w-4xl mx-auto space-y-6">
         <div v-for="i in 2" :key="i" class="glass-effect rounded-3xl p-8 animate-pulse">
           <div class="h-8 w-1/2 bg-white/10 rounded mb-4"></div>
@@ -87,13 +110,20 @@
             </div>
           </div>
           
-          <!-- 发布时间和标签 -->
+          <!-- 发布时间、分类和标签 -->
           <div class="flex flex-wrap items-center gap-2 md:gap-3 mb-3 md:mb-4 text-xs md:text-sm text-tokyo-night-dark5">
             <span class="flex items-center gap-2">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
               </svg>
               {{ formatDate(article.created_at) }}
+            </span>
+            <!-- 分类 -->
+            <span v-if="article.category_name" class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
+              </svg>
+              {{ article.category_name }}
             </span>
             <span v-if="article.location" class="flex items-center gap-2">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -166,6 +196,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useScrollAnimation } from '../composables/useScrollAnimation'
 import { useTheme } from '../composables/useTheme'
+import axios from 'axios'
 
 
 useScrollAnimation()
@@ -174,19 +205,39 @@ const router = useRouter()
 
 const API_URL = '/api/posts'
 const articles = ref([])
+const categories = ref([])
 const loading = ref(false)
 const error = ref('')
+const selectedCategory = ref(null)
 const currentPage = ref(1)
 const pageSize = 6
 
 const totalPages = computed(() => {
-  if (articles.value.length === 0) return 1
-  return Math.ceil(articles.value.length / pageSize)
+  let filteredArticles = articles.value
+  
+  // 按分类筛选
+  if (selectedCategory.value) {
+    filteredArticles = filteredArticles.filter(article => 
+      article.category_id === selectedCategory.value
+    )
+  }
+  
+  if (filteredArticles.length === 0) return 1
+  return Math.ceil(filteredArticles.length / pageSize)
 })
 
 const displayedArticles = computed(() => {
+  let filteredArticles = articles.value
+  
+  // 按分类筛选
+  if (selectedCategory.value) {
+    filteredArticles = filteredArticles.filter(article => 
+      article.category_id === selectedCategory.value
+    )
+  }
+  
   const start = (currentPage.value - 1) * pageSize
-  return articles.value.slice(start, start + pageSize)
+  return filteredArticles.slice(start, start + pageSize)
 })
 
 const latestArticleDate = computed(() => {
@@ -196,6 +247,17 @@ const latestArticleDate = computed(() => {
   )
   return formatDate(latest.created_at)
 })
+
+const fetchCategories = async () => {
+  try {
+    const response = await axios.get('/api/categories')
+    if (response.data.success) {
+      categories.value = response.data.data
+    }
+  } catch (error) {
+    console.error('获取分类列表失败:', error)
+  }
+}
 
 const fetchArticles = async () => {
   loading.value = true
@@ -224,7 +286,10 @@ const fetchArticles = async () => {
   }
 }
 
-onMounted(fetchArticles)
+onMounted(async () => {
+  await fetchCategories()
+  await fetchArticles()
+})
 
 watch(totalPages, (newTotal) => {
   if (currentPage.value > newTotal) {
