@@ -175,7 +175,6 @@ const emit = defineEmits(['save', 'cancel'])
 
 // 响应式数据
 const showOptionalFields = ref(false)
-const categories = ref([])
 const formData = ref({
   title: '',
   slug: '',
@@ -189,6 +188,7 @@ const formData = ref({
 })
 
 const tagsInput = ref('')
+const categories = ref([])
 
 // 方法定义（必须在watch之前，避免初始化错误）
 const resetForm = () => {

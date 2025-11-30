@@ -5,6 +5,23 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
+-- 分类表
+CREATE TABLE IF NOT EXISTS categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 插入默认分类
+INSERT INTO categories (name, slug, description) VALUES
+('未分类', 'uncategorized', '默认分类，用于未指定分类的文章'),
+('技术', 'tech', '技术相关文章'),
+('生活', 'life', '生活感悟和随笔'),
+('学习', 'learning', '学习笔记和心得')
+ON CONFLICT (slug) DO NOTHING;
+
 -- 文章表
 CREATE TABLE IF NOT EXISTS posts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -17,11 +34,11 @@ CREATE TABLE IF NOT EXISTS posts (
     password_protected BOOLEAN DEFAULT false,
     password VARCHAR(255),
     tags JSONB DEFAULT '[]',
+    category_id INTEGER REFERENCES categories(id) DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     view_count INTEGER DEFAULT 0,
     author VARCHAR(100) DEFAULT 'Tao',
-    category VARCHAR(100) DEFAULT '技术',
     reading_time INTEGER DEFAULT 5
 );
 
@@ -32,6 +49,8 @@ CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_tags ON posts USING GIN(tags);
 CREATE INDEX IF NOT EXISTS idx_posts_title_search ON posts USING GIN(to_tsvector('chinese', title));
 CREATE INDEX IF NOT EXISTS idx_posts_content_search ON posts USING GIN(to_tsvector('chinese', content));
+CREATE INDEX IF NOT EXISTS idx_posts_category_id ON posts(category_id);
+CREATE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug);
 
 -- 消息表（用于联系表单）
 CREATE TABLE IF NOT EXISTS messages (
@@ -65,7 +84,7 @@ CREATE TRIGGER update_posts_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- 插入一些示例数据
-INSERT INTO posts (title, slug, content, excerpt, published, tags, category) VALUES
+INSERT INTO posts (title, slug, content, excerpt, published, tags, category_id) VALUES
 ('欢迎来到Tao的博客', 'welcome-to-tao-blog', 
 '# 欢迎来到我的个人博客
 
@@ -87,7 +106,7 @@ INSERT INTO posts (title, slug, content, excerpt, published, tags, category) VAL
 
 如果你有任何问题或建议，欢迎通过联系表单与我交流。
 
-', '欢迎来到Tao的个人技术博客，分享前端开发、用户体验和技术心得。', true, '["博客", "介绍", "技术"]', '介绍'),
+', '欢迎来到Tao的个人技术博客，分享前端开发、用户体验和技术心得。', true, '["博客", "介绍", "技术"]', 2),
 
 
 
@@ -127,7 +146,7 @@ export default {
 - 更清晰的代码组织
 - 更好的TypeScript支持
 
-', 'Vue 3组合式API的入门教程，包含基本语法和使用示例。', true, '["Vue.js", "前端", "JavaScript", "教程"]', '前端开发');
+', 'Vue 3组合式API的入门教程，包含基本语法和使用示例。', true, '["Vue.js", "前端", "JavaScript", "教程"]', 2);
 
 -- 更新序列（确保自增ID正常工作）
 SELECT setval('posts_id_seq', (SELECT MAX(id) FROM posts));

@@ -5,14 +5,7 @@ import { fileURLToPath } from 'url'
 import { config } from 'dotenv'
 
 // 加载环境变量
-// 优先尝试SQLite配置，如果不存在则使用原始配置
-try {
-  config({ path: '.env.sqlite' })
-  console.log('使用SQLite配置启动服务器')
-} catch (error) {
-  config({ path: '.env.local' })
-  console.log('使用原始配置启动服务器')
-}
+config({ path: '.env.local' })
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -110,17 +103,6 @@ app.all('/api/posts/:slug', async (req, res) => {
     return postsHandler.default(req, res)
   } catch (error) {
     console.error('Post detail API error:', error)
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
-
-// 分类API - 支持所有HTTP方法
-app.all('/api/categories', async (req, res) => {
-  try {
-    const categoriesHandler = await import('./api/categories/index.js')
-    return categoriesHandler.default(req, res)
-  } catch (error) {
-    console.error('Categories API error:', error)
     res.status(500).json({ success: false, error: error.message })
   }
 })

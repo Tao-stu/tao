@@ -196,6 +196,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useScrollAnimation } from '../composables/useScrollAnimation'
 import { useTheme } from '../composables/useTheme'
+import axios from 'axios'
 
 
 useScrollAnimation()
@@ -214,8 +215,8 @@ const pageSize = 6
 const totalPages = computed(() => {
   let filteredArticles = articles.value
   
-  // 按分类筛选，null表示全部分类
-  if (selectedCategory.value !== null) {
+  // 按分类筛选
+  if (selectedCategory.value) {
     filteredArticles = filteredArticles.filter(article => 
       article.category_id === selectedCategory.value
     )
@@ -228,8 +229,8 @@ const totalPages = computed(() => {
 const displayedArticles = computed(() => {
   let filteredArticles = articles.value
   
-  // 按分类筛选，null表示全部分类
-  if (selectedCategory.value !== null) {
+  // 按分类筛选
+  if (selectedCategory.value) {
     filteredArticles = filteredArticles.filter(article => 
       article.category_id === selectedCategory.value
     )
@@ -251,14 +252,7 @@ const fetchCategories = async () => {
   try {
     const response = await axios.get('/api/categories')
     if (response.data.success) {
-      // 添加全部分类选项
-      const allCategories = [
-        { id: null, name: '全部', post_count: 0 },
-        ...response.data.data
-      ]
-      // 计算全部分类的文章数量
-      allCategories[0].post_count = response.data.data.reduce((sum, cat) => sum + (cat.post_count || 0), 0)
-      categories.value = allCategories
+      categories.value = response.data.data
     }
   } catch (error) {
     console.error('获取分类列表失败:', error)

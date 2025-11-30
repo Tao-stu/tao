@@ -1,14 +1,11 @@
 // 数据库连接工具函数
-// 支持 Vercel Postgres、Prisma Postgres 和 SQLite（作为回退）
+// 支持 Vercel Postgres 和 Prisma Postgres
 
 export async function getDatabaseClient() {
   const connectionString = process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL;
   
   if (!connectionString) {
-    console.log('PostgreSQL未配置，回退到SQLite');
-    // 回退到SQLite
-    const { getSqliteDatabaseClient } = await import('./sqlite-db.js');
-    return getSqliteDatabaseClient();
+    throw new Error('未配置 POSTGRES_URL 或 POSTGRES_URL_NON_POOLING 环境变量');
   }
   
   // 检查是否是 Prisma Postgres
