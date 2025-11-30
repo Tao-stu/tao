@@ -49,7 +49,18 @@
       <div v-if="!loading" class="max-w-6xl mx-auto mb-6">
         <div class="glass-effect rounded-2xl p-4">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="text-sm font-medium transition-colors" :class="isDark ? 'text-gray-300' : 'text-gray-700'">分类筛选：</span>
+            <button 
+              @click="selectedCategory = null"
+              class="px-3 py-1 text-sm rounded-full transition-all duration-300 border"
+              :class="selectedCategory === null 
+                ? 'bg-tokyo-night-blue text-white border-tokyo-night-blue' 
+                : (isDark 
+                  ? 'bg-tokyo-night-bg-highlight text-gray-300 border-tokyo-night-blue/30 hover:bg-tokyo-night-blue/20' 
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100')"
+            >
+              全部
+              <span class="ml-1 text-xs opacity-75">({{ articles.length }})</span>
+            </button>
             <button 
               v-for="category in categories" 
               :key="category.id"
