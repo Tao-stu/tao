@@ -642,9 +642,6 @@ const categories = ref([])
 const newCategoryName = ref('')
 const categoryMessage = ref('')
 const categoryMessageType = ref('success')
-const isRestoring = ref(false)
-const restoreError = ref('')
-const restoreSuccess = ref('')
 const backupFile = ref(null)
 
 
