@@ -40,32 +40,43 @@
         </div>
       </div>
 
+      <!-- 分类筛选 -->
+      <div v-if="!loading && !error" class="max-w-6xl mx-auto mb-6 md:mb-8">
+        <div class="glass-effect rounded-2xl p-4">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <span class="text-sm font-medium transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
+              分类筛选：
+            </span>
+            <div class="flex flex-wrap gap-2">
+              <button
+                @click="selectedCategory = null"
+                class="px-3 py-1 text-sm rounded-full transition-all duration-300 font-medium"
+                :class="!selectedCategory 
+                  ? 'bg-tokyo-night-blue text-white' 
+                  : (isDark ? 'bg-tokyo-night-bg-highlight text-gray-300 hover:bg-tokyo-night-blue' : 'bg-gray-100 text-gray-700 hover:bg-blue-100')"
+              >
+                全部
+              </button>
+              <button
+                v-for="category in categories"
+                :key="category.id"
+                @click="selectedCategory = category.id"
+                class="px-3 py-1 text-sm rounded-full transition-all duration-300 font-medium"
+                :class="selectedCategory === category.id 
+                  ? 'bg-tokyo-night-blue text-white' 
+                  : (isDark ? 'bg-tokyo-night-bg-highlight text-gray-300 hover:bg-tokyo-night-blue' : 'bg-gray-100 text-gray-700 hover:bg-blue-100')"
+              >
+                {{ category.name }}
+                <span v-if="category.post_count > 0" class="ml-1 opacity-75">({{ category.post_count }})</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 提示 -->
       <div v-if="error" class="max-w-3xl mx-auto mb-6 px-4 py-3 rounded-2xl border border-red-300 bg-red-50 text-red-600">
         {{ error }}
-      </div>
-
-      <!-- 分类筛选 -->
-      <div v-if="!loading" class="max-w-6xl mx-auto mb-6">
-        <div class="glass-effect rounded-2xl p-4">
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-sm font-medium transition-colors" :class="isDark ? 'text-gray-300' : 'text-gray-700'">分类筛选：</span>
-            <button 
-              v-for="category in categories" 
-              :key="category.id"
-              @click="selectedCategory = category.id === selectedCategory ? null : category.id"
-              class="px-3 py-1 text-sm rounded-full transition-all duration-300 border"
-              :class="selectedCategory === category.id 
-                ? 'bg-tokyo-night-blue text-white border-tokyo-night-blue' 
-                : (isDark 
-                  ? 'bg-tokyo-night-bg-highlight text-gray-300 border-tokyo-night-blue/30 hover:bg-tokyo-night-blue/20' 
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100')"
-            >
-              {{ category.name }}
-              <span v-if="category.post_count > 0" class="ml-1 text-xs opacity-75">({{ category.post_count }})</span>
-            </button>
-          </div>
-        </div>
       </div>
 
       <div v-if="loading" class="max-w-4xl mx-auto space-y-6">
@@ -110,7 +121,7 @@
             </div>
           </div>
           
-          <!-- 发布时间、分类和标签 -->
+          <!-- 发布时间和标签 -->
           <div class="flex flex-wrap items-center gap-2 md:gap-3 mb-3 md:mb-4 text-xs md:text-sm text-tokyo-night-dark5">
             <span class="flex items-center gap-2">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -118,23 +129,26 @@
               </svg>
               {{ formatDate(article.created_at) }}
             </span>
-            <!-- 分类 -->
-            <span v-if="article.category_name" class="flex items-center gap-2">
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z"/>
-              </svg>
-              {{ article.category_name }}
-            </span>
             <span v-if="article.location" class="flex items-center gap-2">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
               </svg>
               {{ article.location }}
             </span>
+            <!-- 分类 -->
+            <span v-if="article.categories && article.categories.length > 0" class="flex items-center gap-2">
+              <span 
+                v-for="category in article.categories.slice(0, 2)" 
+                :key="category.id"
+                class="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-400 border border-green-500/30"
+              >
+                📁 {{ category.name }}
+              </span>
+            </span>
             <!-- 标签 -->
             <span v-if="article.tags && article.tags.length > 0" class="flex items-center gap-2">
               <span 
-                v-for="tag in article.tags.slice(0, 3)" 
+                v-for="tag in article.tags.slice(0, 2)" 
                 :key="tag"
                 class="px-2 py-1 text-xs rounded-full bg-tokyo-night-blue/20 text-tokyo-night-cyan border border-tokyo-night-blue/30"
               >
@@ -196,7 +210,6 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useScrollAnimation } from '../composables/useScrollAnimation'
 import { useTheme } from '../composables/useTheme'
-import axios from 'axios'
 
 
 useScrollAnimation()
@@ -205,39 +218,21 @@ const router = useRouter()
 
 const API_URL = '/api/posts'
 const articles = ref([])
-const categories = ref([])
 const loading = ref(false)
 const error = ref('')
-const selectedCategory = ref(null)
 const currentPage = ref(1)
 const pageSize = 6
+const categories = ref([])
+const selectedCategory = ref(null)
 
 const totalPages = computed(() => {
-  let filteredArticles = articles.value
-  
-  // 按分类筛选，null表示全部分类
-  if (selectedCategory.value !== null) {
-    filteredArticles = filteredArticles.filter(article => 
-      article.category_id === selectedCategory.value
-    )
-  }
-  
-  if (filteredArticles.length === 0) return 1
-  return Math.ceil(filteredArticles.length / pageSize)
+  if (articles.value.length === 0) return 1
+  return Math.ceil(articles.value.length / pageSize)
 })
 
 const displayedArticles = computed(() => {
-  let filteredArticles = articles.value
-  
-  // 按分类筛选，null表示全部分类
-  if (selectedCategory.value !== null) {
-    filteredArticles = filteredArticles.filter(article => 
-      article.category_id === selectedCategory.value
-    )
-  }
-  
   const start = (currentPage.value - 1) * pageSize
-  return filteredArticles.slice(start, start + pageSize)
+  return articles.value.slice(start, start + pageSize)
 })
 
 const latestArticleDate = computed(() => {
@@ -248,29 +243,16 @@ const latestArticleDate = computed(() => {
   return formatDate(latest.created_at)
 })
 
-const fetchCategories = async () => {
-  try {
-    const response = await axios.get('/api/categories')
-    if (response.data.success) {
-      // 添加全部分类选项
-      const allCategories = [
-        { id: null, name: '全部', post_count: 0 },
-        ...response.data.data
-      ]
-      // 计算全部分类的文章数量
-      allCategories[0].post_count = response.data.data.reduce((sum, cat) => sum + (cat.post_count || 0), 0)
-      categories.value = allCategories
-    }
-  } catch (error) {
-    console.error('获取分类列表失败:', error)
-  }
-}
-
 const fetchArticles = async () => {
   loading.value = true
   error.value = ''
   try {
-    const response = await fetch(`${API_URL}?includeDrafts=false&limit=100`)
+    let url = `${API_URL}?includeDrafts=false&limit=100`
+    if (selectedCategory.value) {
+      url += `&categoryId=${selectedCategory.value}`
+    }
+    
+    const response = await fetch(url)
     
     // 检查响应是否为JSON
     const contentType = response.headers.get('content-type')
@@ -293,15 +275,31 @@ const fetchArticles = async () => {
   }
 }
 
-onMounted(async () => {
-  await fetchCategories()
-  await fetchArticles()
+const fetchCategories = async () => {
+  try {
+    const response = await fetch('/api/categories')
+    const result = await response.json()
+    if (result.success) {
+      categories.value = result.data
+    }
+  } catch (err) {
+    console.error('Categories fetch error:', err)
+  }
+}
+
+onMounted(() => {
+  fetchArticles()
+  fetchCategories()
 })
 
 watch(totalPages, (newTotal) => {
   if (currentPage.value > newTotal) {
     currentPage.value = 1
   }
+})
+
+watch(selectedCategory, () => {
+  fetchArticles()
 })
 
 const formatDate = (value) => {

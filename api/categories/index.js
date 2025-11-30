@@ -1,4 +1,4 @@
-// Vercel Serverless Function - 分类 API
+// Vercel Serverless Function - 分类管理 API
 import { authenticateRequest } from '../utils/auth.js';
 
 export default async function handler(req, res) {
@@ -14,9 +14,7 @@ export default async function handler(req, res) {
 
   // 对于需要认证的操作（POST, PUT, DELETE），验证 token
   if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
-    console.log('分类API认证检查开始...');
     const authResult = authenticateRequest(req);
-    console.log('分类API认证结果:', authResult);
     if (!authResult) {
       return res.status(401).json({
         success: false,
@@ -33,66 +31,94 @@ export default async function handler(req, res) {
     const pool = db.pool;
 
     // 初始化分类表
-    if (pool) {
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS categories (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(100) UNIQUE NOT NULL,
-          description TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      
-      // 插入默认分类
-      await pool.query(`
-        INSERT INTO categories (name, description) VALUES
-        ('未分类', '默认分类，用于未指定分类的文章'),
-        ('技术', '技术相关文章'),
-        ('生活', '生活感悟和随笔'),
-        ('学习', '学习笔记和心得')
-        ON CONFLICT (name) DO NOTHING
-      `);
-    } else {
-      await sql`
-        CREATE TABLE IF NOT EXISTS categories (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(100) UNIQUE NOT NULL,
-          description TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `;
-      
-      // 插入默认分类
-      await sql`
-        INSERT INTO categories (name, description) VALUES
-        ('未分类', '默认分类，用于未指定分类的文章'),
-        ('技术', '技术相关文章'),
-        ('生活', '生活感悟和随笔'),
-        ('学习', '学习笔记和心得')
-        ON CONFLICT (name) DO NOTHING
-      `;
-    }
+    const createCategoriesTable = async () => {
+      if (pool) {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS categories (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL UNIQUE,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+      } else {
+        await sql`
+          CREATE TABLE IF NOT EXISTS categories (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL UNIQUE,
+            description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `;
+      }
+    };
+
+    // 初始化文章分类关联表
+    const createPostCategoriesTable = async () => {
+      if (pool) {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS post_categories (
+            id SERIAL PRIMARY KEY,
+            post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+            category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(post_id, category_id)
+          )
+        `);
+      } else {
+        await sql`
+          CREATE TABLE IF NOT EXISTS post_categories (
+            id SERIAL PRIMARY KEY,
+            post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+            category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(post_id, category_id)
+          )
+        `;
+      }
+    };
+
+    // 创建表
+    await createCategoriesTable();
+    await createPostCategoriesTable();
+
+    // 插入默认分类"未分类"
+    const insertDefaultCategory = async () => {
+      try {
+        if (pool) {
+          await pool.query(`
+            INSERT INTO categories (name, description) 
+            VALUES ('未分类', '默认分类，未指定分类的文章将归入此类')
+            ON CONFLICT (name) DO NOTHING
+          `);
+        } else {
+          await sql`
+            INSERT INTO categories (name, description) 
+            VALUES ('未分类', '默认分类，未指定分类的文章将归入此类')
+            ON CONFLICT (name) DO NOTHING
+          `;
+        }
+      } catch (error) {
+        // 忽略插入冲突错误
+        if (!error.message.includes('duplicate')) {
+          console.warn('插入默认分类时出错:', error.message);
+        }
+      }
+    };
+    await insertDefaultCategory();
 
     // GET - 获取所有分类
     if (req.method === 'GET') {
-      console.log('[API] GET /categories 请求');
-      
       let result;
       if (pool) {
         result = await pool.query(`
-          SELECT c.*, COUNT(p.id) as post_count 
-          FROM categories c 
-          LEFT JOIN posts p ON c.id = p.category_id AND p.published = TRUE AND p.status = 'published'
-          GROUP BY c.id, c.name, c.description, c.created_at
-          ORDER BY c.created_at ASC
+          SELECT * FROM categories 
+          ORDER BY id ASC
         `);
       } else {
         result = await sql`
-          SELECT c.*, COUNT(p.id) as post_count 
-          FROM categories c 
-          LEFT JOIN posts p ON c.id = p.category_id AND p.published = TRUE AND p.status = 'published'
-          GROUP BY c.id, c.name, c.description, c.created_at
-          ORDER BY c.created_at ASC
+          SELECT * FROM categories 
+          ORDER BY id ASC
         `;
       }
       const rows = result.rows || result;
@@ -106,82 +132,39 @@ export default async function handler(req, res) {
     // POST - 创建新分类
     if (req.method === 'POST') {
       const { name, description } = req.body;
-      
-      console.log('[API] POST /categories 请求', {
-        name,
-        description
-      });
 
-      // 验证必填字段
-      if (!name) {
+      if (!name || name.trim() === '') {
         return res.status(400).json({
           success: false,
           error: '分类名称不能为空'
         });
       }
 
-      // 检查名称是否已存在
+      let result;
       if (pool) {
-        const existingResult = await pool.query(
-          'SELECT id FROM categories WHERE name = $1 LIMIT 1',
-          [name]
-        );
-        const existing = existingResult.rows;
-
-        if (existing && existing.length > 0) {
-          return res.status(409).json({
-            success: false,
-            error: '该分类名称已存在'
-          });
-        }
-
-        const insertResult = await pool.query(
-          'INSERT INTO categories (name, description) VALUES ($1, $2) RETURNING *',
-          [name, description || '']
-        );
-        const rows = insertResult.rows;
-        
-        return res.status(201).json({
-          success: true,
-          data: rows[0]
-        });
-      } else {
-        // 使用 Vercel Postgres
-        const existingResult = await sql`
-          SELECT id FROM categories WHERE name = ${name} LIMIT 1
-        `;
-        const existing = existingResult.rows || existingResult;
-
-        if (existing && existing.length > 0) {
-          return res.status(409).json({
-            success: false,
-            error: '该分类名称已存在'
-          });
-        }
-
-        const result = await sql`
+        result = await pool.query(`
           INSERT INTO categories (name, description) 
-          VALUES (${name}, ${description || ''}) 
+          VALUES ($1, $2)
+          RETURNING *
+        `, [name.trim(), description || '']);
+      } else {
+        result = await sql`
+          INSERT INTO categories (name, description) 
+          VALUES (${name.trim()}, ${description || ''})
           RETURNING *
         `;
-        const rows = result.rows || result;
-        
-        return res.status(201).json({
-          success: true,
-          data: rows[0]
-        });
       }
+      const rows = result.rows || result;
+
+      return res.status(201).json({
+        success: true,
+        data: rows[0]
+      });
     }
 
     // PUT - 更新分类
     if (req.method === 'PUT') {
       const { id, name, description } = req.body;
-      
-      console.log('[API] PUT /categories 请求', {
-        id,
-        name,
-        description
-      });
 
       if (!id) {
         return res.status(400).json({
@@ -190,72 +173,42 @@ export default async function handler(req, res) {
         });
       }
 
-      // 检查名称是否已被其他分类使用
-      if (pool) {
-        const existingResult = await pool.query(
-          'SELECT id FROM categories WHERE name = $1 AND id != $2 LIMIT 1',
-          [name, id]
-        );
-        const existing = existingResult.rows;
-
-        if (existing && existing.length > 0) {
-          return res.status(409).json({
-            success: false,
-            error: '该分类名称已被其他分类使用'
-          });
-        }
-
-        const updateResult = await pool.query(
-          'UPDATE categories SET name = $1, description = $2 WHERE id = $3 RETURNING *',
-          [name, description || '', id]
-        );
-        const rows = updateResult.rows;
-
-        if (rows.length === 0) {
-          return res.status(404).json({
-            success: false,
-            error: '分类不存在'
-          });
-        }
-
-        return res.status(200).json({
-          success: true,
-          data: rows[0]
+      if (!name || name.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          error: '分类名称不能为空'
         });
-      } else {
-        // 使用 Vercel Postgres
-        const existingResult = await sql`
-          SELECT id FROM categories WHERE name = ${name} AND id != ${id} LIMIT 1
-        `;
-        const existing = existingResult.rows || existingResult;
+      }
 
-        if (existing && existing.length > 0) {
-          return res.status(409).json({
-            success: false,
-            error: '该分类名称已被其他分类使用'
-          });
-        }
-
-        const result = await sql`
+      let result;
+      if (pool) {
+        result = await pool.query(`
           UPDATE categories 
-          SET name = ${name}, description = ${description || ''} 
+          SET name = $1, description = $2
+          WHERE id = $3
+          RETURNING *
+        `, [name.trim(), description || '', id]);
+      } else {
+        result = await sql`
+          UPDATE categories 
+          SET name = ${name.trim()}, description = ${description || ''}
           WHERE id = ${id}
           RETURNING *
         `;
-        const rows = result.rows || result;
+      }
+      const rows = result.rows || result;
 
-        if (rows.length === 0) {
-          return res.status(404).json({
-            success: false,
-            error: '分类不存在'
-          });
-        }
-
-        return res.status(200).json({
-          success: true,
-          data: rows[0]
+      if (rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: '分类不存在'
         });
       }
+
+      return res.status(200).json({
+        success: true,
+        data: rows[0]
+      });
     }
 
     // DELETE - 删除分类
@@ -269,70 +222,74 @@ export default async function handler(req, res) {
         });
       }
 
-      // 检查是否有文章使用此分类
+      // 检查是否是"未分类"默认分类
+      let categoryResult;
       if (pool) {
-        const postsResult = await pool.query(
-          'SELECT COUNT(*) as count FROM posts WHERE category_id = $1',
-          [id]
-        );
-        const postCount = parseInt(postsResult.rows[0].count);
-
-        if (postCount > 0) {
-          return res.status(400).json({
-            success: false,
-            error: `无法删除分类，还有 ${postCount} 篇文章使用此分类。请先将这些文章移到其他分类。`
-          });
-        }
-
-        const deleteResult = await pool.query(
-          'DELETE FROM categories WHERE id = $1',
-          [id]
-        );
-        const rowCount = deleteResult.rowCount;
-
-        if (rowCount === 0) {
-          return res.status(404).json({
-            success: false,
-            error: '分类不存在'
-          });
-        }
-
-        return res.status(200).json({
-          success: true,
-          message: '分类已删除'
-        });
+        categoryResult = await pool.query(`
+          SELECT name FROM categories WHERE id = $1
+        `, [id]);
       } else {
-        // 使用 Vercel Postgres
-        const postsResult = await sql`
-          SELECT COUNT(*) as count FROM posts WHERE category_id = ${id}
+        categoryResult = await sql`
+          SELECT name FROM categories WHERE id = ${id}
         `;
-        const rows = postsResult.rows || postsResult;
-        const postCount = parseInt(rows[0].count);
+      }
+      const categoryRows = categoryResult.rows || categoryResult;
 
-        if (postCount > 0) {
-          return res.status(400).json({
-            success: false,
-            error: `无法删除分类，还有 ${postCount} 篇文章使用此分类。请先将这些文章移到其他分类。`
-          });
-        }
-
-        const result = await sql`
-          DELETE FROM categories WHERE id = ${id}
-        `;
-        const rowCount = result.rowCount || (result.rows ? result.rows.length : 0);
-
-        if (rowCount === 0) {
-          return res.status(404).json({
-            success: false,
-            error: '分类不存在'
-          });
-        }
-
-        return res.status(200).json({
-          success: true,
-          message: '分类已删除'
+      if (categoryRows.length > 0 && categoryRows[0].name === '未分类') {
+        return res.status(400).json({
+          success: false,
+          error: '不能删除默认分类"未分类"'
         });
       }
+
+      // 删除分类前，将该分类下的文章移到"未分类"
+      const uncategorizedResult = await sql`
+        SELECT id FROM categories WHERE name = '未分类' LIMIT 1
+      `;
+      const uncategorizedRows = uncategorizedResult.rows || uncategorizedResult;
+      
+      if (uncategorizedRows.length > 0) {
+        const uncategorizedId = uncategorizedRows[0].id;
+        
+        if (pool) {
+          await pool.query(`
+            UPDATE post_categories 
+            SET category_id = $1 
+            WHERE category_id = $2
+          `, [uncategorizedId, id]);
+        } else {
+          await sql`
+            UPDATE post_categories 
+            SET category_id = ${uncategorizedId} 
+            WHERE category_id = ${id}
+          `;
+        }
+      }
+
+      // 删除分类
+      let result;
+      if (pool) {
+        result = await pool.query(`
+          DELETE FROM categories WHERE id = $1
+        `, [id]);
+      } else {
+        result = await sql`
+          DELETE FROM categories WHERE id = ${id}
+        `;
+      }
+      const rowCount = result.rowCount || (result.rows ? result.rows.length : 0);
+
+      if (rowCount === 0) {
+        return res.status(404).json({
+          success: false,
+          error: '分类不存在'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: '分类已删除，相关文章已移至"未分类"'
+      });
     }
 
     // 不支持的方法
@@ -343,22 +300,16 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Categories API Error:', error);
-    console.error('Error stack:', error.stack);
     
     let errorMessage = '服务器错误，请稍后再试';
     if (error.message && error.message.includes('duplicate key')) {
-      errorMessage = '数据已存在，请检查唯一性约束';
-    } else if (error.message && error.message.includes('violates foreign key')) {
-      errorMessage = '数据关联错误，请检查关联数据';
-    } else if (error.message && error.message.includes('syntax error')) {
-      errorMessage = '数据库查询语法错误';
+      errorMessage = '分类名称已存在';
     }
     
     return res.status(500).json({
       success: false,
       error: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-      errorCode: error.code || 'UNKNOWN'
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }

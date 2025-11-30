@@ -34,26 +34,6 @@ export default async function handler(req, res) {
 
     // 初始化数据库表
     if (pool) {
-      // 创建分类表
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS categories (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(100) UNIQUE NOT NULL,
-          description TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      
-      // 插入默认分类
-      await pool.query(`
-        INSERT INTO categories (name, description) VALUES
-        ('未分类', '默认分类，用于未指定分类的文章'),
-        ('技术', '技术相关文章'),
-        ('生活', '生活感悟和随笔'),
-        ('学习', '学习笔记和心得')
-        ON CONFLICT (name) DO NOTHING
-      `);
-      
       await pool.query(`
         CREATE TABLE IF NOT EXISTS posts (
           id SERIAL PRIMARY KEY,
@@ -68,10 +48,8 @@ export default async function handler(req, res) {
           published BOOLEAN DEFAULT TRUE,
           is_encrypted BOOLEAN DEFAULT FALSE,
           access_password VARCHAR(255),
-          category_id INTEGER DEFAULT 1,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (category_id) REFERENCES categories(id)
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
       
@@ -112,10 +90,6 @@ export default async function handler(req, res) {
                           WHERE table_name='posts' AND column_name='summary') THEN
               ALTER TABLE posts ADD COLUMN summary TEXT;
             END IF;
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                          WHERE table_name='posts' AND column_name='category_id') THEN
-              ALTER TABLE posts ADD COLUMN category_id INTEGER DEFAULT 1;
-            END IF;
           END $$;
         `);
       } catch (migrationError) {
@@ -129,8 +103,7 @@ export default async function handler(req, res) {
           { name: 'status', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT \'published\'' },
           { name: 'location', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS location VARCHAR(120)' },
           { name: 'cover', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS cover TEXT' },
-          { name: 'summary', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS summary TEXT' },
-          { name: 'category_id', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS category_id INTEGER DEFAULT 1' }
+          { name: 'summary', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS summary TEXT' }
         ];
         
         for (const column of columnsToAdd) {
@@ -145,26 +118,6 @@ export default async function handler(req, res) {
         }
       }
     } else {
-      // 创建分类表
-      await sql`
-        CREATE TABLE IF NOT EXISTS categories (
-          id SERIAL PRIMARY KEY,
-          name VARCHAR(100) UNIQUE NOT NULL,
-          description TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `;
-      
-      // 插入默认分类
-      await sql`
-        INSERT INTO categories (name, description) VALUES
-        ('未分类', '默认分类，用于未指定分类的文章'),
-        ('技术', '技术相关文章'),
-        ('生活', '生活感悟和随笔'),
-        ('学习', '学习笔记和心得')
-        ON CONFLICT (name) DO NOTHING
-      `;
-      
       await sql`
         CREATE TABLE IF NOT EXISTS posts (
           id SERIAL PRIMARY KEY,
@@ -179,7 +132,6 @@ export default async function handler(req, res) {
           published BOOLEAN DEFAULT TRUE,
           is_encrypted BOOLEAN DEFAULT FALSE,
           access_password VARCHAR(255),
-          category_id INTEGER DEFAULT 1,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -224,8 +176,7 @@ export default async function handler(req, res) {
         { name: 'status', type: 'VARCHAR(20) DEFAULT \'published\'' },
         { name: 'location', type: 'VARCHAR(120)' },
         { name: 'cover', type: 'TEXT' },
-        { name: 'summary', type: 'TEXT' },
-        { name: 'category_id', type: 'INTEGER DEFAULT 1' }
+        { name: 'summary', type: 'TEXT' }
       ];
       
       for (const column of columnsToCheck) {
@@ -264,10 +215,8 @@ export default async function handler(req, res) {
         console.log('[API] 通过 slug 获取文章', { slug });
         // 通过slug获取单篇文章
         const result = await sql`
-          SELECT p.*, c.name as category_name 
-          FROM posts p 
-          LEFT JOIN categories c ON p.category_id = c.id
-          WHERE p.slug = ${slug}
+          SELECT * FROM posts 
+          WHERE slug = ${slug}
           LIMIT 1
         `;
         const rows = result.rows || result;
@@ -321,10 +270,8 @@ export default async function handler(req, res) {
         console.log('[API] 通过 id 获取文章', { id });
         // 通过id获取单篇文章
         const result = await sql`
-          SELECT p.*, c.name as category_name 
-          FROM posts p 
-          LEFT JOIN categories c ON p.category_id = c.id
-          WHERE p.id = ${id}
+          SELECT * FROM posts 
+          WHERE id = ${id}
           LIMIT 1
         `;
         const rows = result.rows || result;
@@ -378,38 +325,105 @@ export default async function handler(req, res) {
         // 获取所有文章
         const limit = Number(req.query.limit) || 50;
         const includeDrafts = req.query.includeDrafts !== 'false';
+        const categoryId = req.query.categoryId;
         
         let result;
-        if (includeDrafts) {
-          result = await sql`
-            SELECT p.*, c.name as category_name 
-            FROM posts p 
-            LEFT JOIN categories c ON p.category_id = c.id
-            ORDER BY p.updated_at DESC
-            LIMIT ${limit}
-          `;
+        if (categoryId) {
+          // 获取指定分类的文章
+          if (includeDrafts) {
+            if (pool) {
+              result = await pool.query(`
+                SELECT p.* FROM posts p
+                INNER JOIN post_categories pc ON p.id = pc.post_id
+                WHERE pc.category_id = $1
+                ORDER BY p.updated_at DESC
+                LIMIT $2
+              `, [categoryId, limit]);
+            } else {
+              result = await sql`
+                SELECT p.* FROM posts p
+                INNER JOIN post_categories pc ON p.id = pc.post_id
+                WHERE pc.category_id = ${categoryId}
+                ORDER BY p.updated_at DESC
+                LIMIT ${limit}
+              `;
+            }
+          } else {
+            if (pool) {
+              result = await pool.query(`
+                SELECT p.* FROM posts p
+                INNER JOIN post_categories pc ON p.id = pc.post_id
+                WHERE pc.category_id = $1 AND p.published = TRUE AND p.status = 'published'
+                ORDER BY p.updated_at DESC
+                LIMIT $2
+              `, [categoryId, limit]);
+            } else {
+              result = await sql`
+                SELECT p.* FROM posts p
+                INNER JOIN post_categories pc ON p.id = pc.post_id
+                WHERE pc.category_id = ${categoryId} AND p.published = TRUE AND p.status = 'published'
+                ORDER BY p.updated_at DESC
+                LIMIT ${limit}
+              `;
+            }
+          }
         } else {
-          result = await sql`
-            SELECT p.*, c.name as category_name 
-            FROM posts p 
-            LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.published = TRUE AND p.status = 'published'
-            ORDER BY p.updated_at DESC
-            LIMIT ${limit}
-          `;
+          // 获取所有文章
+          if (includeDrafts) {
+            result = await sql`
+              SELECT * FROM posts 
+              ORDER BY updated_at DESC
+              LIMIT ${limit}
+            `;
+          } else {
+            result = await sql`
+              SELECT * FROM posts 
+              WHERE published = TRUE AND status = 'published'
+              ORDER BY updated_at DESC
+              LIMIT ${limit}
+            `;
+          }
         }
         const rows = result.rows || result;
         
+        // 为每篇文章添加分类信息
+        const postsWithCategories = await Promise.all(
+          rows.map(async (post) => {
+            let categoriesResult;
+            if (pool) {
+              categoriesResult = await pool.query(`
+                SELECT c.* FROM categories c
+                INNER JOIN post_categories pc ON c.id = pc.category_id
+                WHERE pc.post_id = $1
+                ORDER BY c.id ASC
+              `, [post.id]);
+            } else {
+              categoriesResult = await sql`
+                SELECT c.* FROM categories c
+                INNER JOIN post_categories pc ON c.id = pc.category_id
+                WHERE pc.post_id = ${post.id}
+                ORDER BY c.id ASC
+              `;
+            }
+            const categories = categoriesResult.rows || categoriesResult;
+            
+            return {
+              ...post,
+              categories: categories
+            };
+          })
+        );
+        
         return res.status(200).json({
           success: true,
-          data: rows
+          data: postsWithCategories
         });
       }
     }
 
     // POST - 创建新文章
     if (req.method === 'POST') {
-      const { slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password, category_id } = req.body;
+      const { slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password } = req.body;
       
       console.log('[API] POST /posts 请求', {
         slug,
@@ -465,8 +479,8 @@ export default async function handler(req, res) {
       let result;
       if (pool) {
         const insertQuery = `
-          INSERT INTO posts (slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password, category_id)
-          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11, $12)
+          INSERT INTO posts (slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password)
+          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11)
           RETURNING *
         `;
         const insertValues = [
@@ -480,15 +494,14 @@ export default async function handler(req, res) {
           status || 'published', 
           published !== false,
           is_encrypted || false,
-          access_password || '',
-          category_id || 1
+          access_password || ''
         ];
         result = await pool.query(insertQuery, insertValues);
       } else {
         // 使用 Vercel Postgres
         result = await sql`
-          INSERT INTO posts (slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password, category_id)
-          VALUES (${cleanSlug}, ${title}, ${summary || ''}, ${content}, ${location || ''}, ${cover || ''}, ${tagsArray}::jsonb, ${status || 'published'}, ${published !== false}, ${is_encrypted || false}, ${access_password || ''}, ${category_id || 1})
+          INSERT INTO posts (slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password)
+          VALUES (${cleanSlug}, ${title}, ${summary || ''}, ${content}, ${location || ''}, ${cover || ''}, ${tagsArray}::jsonb, ${status || 'published'}, ${published !== false}, ${is_encrypted || false}, ${access_password || ''})
           RETURNING *
         `;
       }
@@ -508,7 +521,7 @@ export default async function handler(req, res) {
 
     // PUT - 更新文章
     if (req.method === 'PUT') {
-      const { id, slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password, category_id } = req.body;
+      const { id, slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password } = req.body;
       
       console.log('[API] PUT /posts 请求', {
         id,
@@ -607,10 +620,6 @@ export default async function handler(req, res) {
         updateParts.push(`access_password = $${paramIndex++}`);
         updateValues.push(access_password || '');
       }
-      if (category_id !== undefined) {
-        updateParts.push(`category_id = $${paramIndex++}`);
-        updateValues.push(category_id);
-      }
       updateParts.push(`updated_at = CURRENT_TIMESTAMP`);
       
       // 添加 id 参数
@@ -682,10 +691,6 @@ export default async function handler(req, res) {
               newUpdateParts.push(`access_password = $${newParamIndex++}`);
               newUpdateValues.push(access_password || '');
             }
-            if (category_id !== undefined) {
-              newUpdateParts.push(`category_id = $${newParamIndex++}`);
-              newUpdateValues.push(category_id);
-            }
             newUpdateParts.push(`updated_at = CURRENT_TIMESTAMP`);
             newUpdateValues.push(id);
             
@@ -739,9 +744,6 @@ export default async function handler(req, res) {
         }
         if (access_password !== undefined) {
           setParts.push(`access_password = ${sql`${access_password || ''}`}`);
-        }
-        if (category_id !== undefined) {
-          setParts.push(`category_id = ${sql`${category_id}`}`);
         }
         setParts.push('updated_at = CURRENT_TIMESTAMP');
         
