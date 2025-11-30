@@ -44,15 +44,7 @@ export default async function handler(req, res) {
         )
       `);
       
-      // 插入默认分类
-      await pool.query(`
-        INSERT INTO categories (name, slug, description) VALUES
-        ('未分类', 'uncategorized', '默认分类，用于未指定分类的文章'),
-        ('技术', 'tech', '技术相关文章'),
-        ('生活', 'life', '生活感悟和随笔'),
-        ('学习', 'learning', '学习笔记和心得')
-        ON CONFLICT (slug) DO NOTHING
-      `);
+      // 不再插入默认分类，用户需要手动创建
     } else {
       await sql`
         CREATE TABLE IF NOT EXISTS categories (
@@ -64,15 +56,7 @@ export default async function handler(req, res) {
         )
       `;
       
-      // 插入默认分类
-      await sql`
-        INSERT INTO categories (name, slug, description) VALUES
-        ('未分类', 'uncategorized', '默认分类，用于未指定分类的文章'),
-        ('技术', 'tech', '技术相关文章'),
-        ('生活', 'life', '生活感悟和随笔'),
-        ('学习', 'learning', '学习笔记和心得')
-        ON CONFLICT (slug) DO NOTHING
-      `;
+      // 不再插入默认分类，用户需要手动创建
     }
 
     // GET - 获取所有分类

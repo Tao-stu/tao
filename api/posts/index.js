@@ -45,15 +45,7 @@ export default async function handler(req, res) {
         )
       `);
       
-      // 插入默认分类
-      await pool.query(`
-        INSERT INTO categories (name, slug, description) VALUES
-        ('未分类', 'uncategorized', '默认分类，用于未指定分类的文章'),
-        ('技术', 'tech', '技术相关文章'),
-        ('生活', 'life', '生活感悟和随笔'),
-        ('学习', 'learning', '学习笔记和心得')
-        ON CONFLICT (slug) DO NOTHING
-      `);
+      // 不再插入默认分类，用户需要手动创建
       
       await pool.query(`
         CREATE TABLE IF NOT EXISTS posts (
@@ -69,7 +61,7 @@ export default async function handler(req, res) {
           published BOOLEAN DEFAULT TRUE,
           is_encrypted BOOLEAN DEFAULT FALSE,
           access_password VARCHAR(255),
-          category_id INTEGER DEFAULT 1,
+          category_id INTEGER,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (category_id) REFERENCES categories(id)
@@ -157,15 +149,7 @@ export default async function handler(req, res) {
         )
       `;
       
-      // 插入默认分类
-      await sql`
-        INSERT INTO categories (name, slug, description) VALUES
-        ('未分类', 'uncategorized', '默认分类，用于未指定分类的文章'),
-        ('技术', 'tech', '技术相关文章'),
-        ('生活', 'life', '生活感悟和随笔'),
-        ('学习', 'learning', '学习笔记和心得')
-        ON CONFLICT (slug) DO NOTHING
-      `;
+      // 不再插入默认分类，用户需要手动创建
       
       await sql`
         CREATE TABLE IF NOT EXISTS posts (
@@ -181,7 +165,7 @@ export default async function handler(req, res) {
           published BOOLEAN DEFAULT TRUE,
           is_encrypted BOOLEAN DEFAULT FALSE,
           access_password VARCHAR(255),
-          category_id INTEGER DEFAULT 1,
+          category_id INTEGER,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )

@@ -14,13 +14,7 @@ CREATE TABLE IF NOT EXISTS categories (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 插入默认分类
-INSERT INTO categories (name, slug, description) VALUES
-('未分类', 'uncategorized', '默认分类，用于未指定分类的文章'),
-('技术', 'tech', '技术相关文章'),
-('生活', 'life', '生活感悟和随笔'),
-('学习', 'learning', '学习笔记和心得')
-ON CONFLICT (slug) DO NOTHING;
+-- 不再插入默认分类，用户需要手动创建
 
 -- 文章表
 CREATE TABLE IF NOT EXISTS posts (
@@ -34,7 +28,7 @@ CREATE TABLE IF NOT EXISTS posts (
     password_protected BOOLEAN DEFAULT false,
     password VARCHAR(255),
     tags JSONB DEFAULT '[]',
-    category_id INTEGER REFERENCES categories(id) DEFAULT 1,
+    category_id INTEGER REFERENCES categories(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     view_count INTEGER DEFAULT 0,
@@ -83,70 +77,7 @@ CREATE TRIGGER update_posts_updated_at
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
--- 插入一些示例数据
-INSERT INTO posts (title, slug, content, excerpt, published, tags, category_id) VALUES
-('欢迎来到Tao的博客', 'welcome-to-tao-blog', 
-'# 欢迎来到我的个人博客
-
-这是我的个人技术博客，在这里我会分享一些技术心得、项目经验和学习笔记。
-
-## 关于我
-
-我是一名热爱技术的开发者，主要关注前端开发和用户体验设计。
-
-## 技术栈
-
-- Vue.js 3
-- Vite
-- Tailwind CSS
-- Node.js
-- PostgreSQL
-
-## 联系方式
-
-如果你有任何问题或建议，欢迎通过联系表单与我交流。
-
-', '欢迎来到Tao的个人技术博客，分享前端开发、用户体验和技术心得。', true, '["博客", "介绍", "技术"]', 2),
-
-
-
-('Vue 3组合式API入门', 'vue3-composition-api-tutorial',
-'# Vue 3组合式API入门教程
-
-Vue 3引入了组合式API，提供了更灵活的代码组织方式。
-
-## 基本语法
-
-```javascript
-import { ref, reactive, computed, onMounted } from ''vue''
-
-export default {
-  setup() {
-    const count = ref(0)
-    const state = reactive({ name: ''Vue'' })
-    
-    const doubled = computed(() => count.value * 2)
-    
-    onMounted(() => {
-      console.log(''组件已挂载'')
-    })
-    
-    return {
-      count,
-      state,
-      doubled
-    }
-  }
-}
-```
-
-## 优势
-
-- 更好的逻辑复用
-- 更清晰的代码组织
-- 更好的TypeScript支持
-
-', 'Vue 3组合式API的入门教程，包含基本语法和使用示例。', true, '["Vue.js", "前端", "JavaScript", "教程"]', 2);
+-- 不再插入示例数据，用户需要手动创建
 
 -- 更新序列（确保自增ID正常工作）
 SELECT setval('posts_id_seq', (SELECT MAX(id) FROM posts));

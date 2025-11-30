@@ -264,6 +264,7 @@ const fetchCategories = async () => {
     const response = await axios.get('/api/categories')
     if (response.data.success) {
       categories.value = response.data.data
+      console.log('获取到的分类:', categories.value)
     }
   } catch (error) {
     console.error('获取分类列表失败:', error)
@@ -287,6 +288,7 @@ const fetchArticles = async () => {
       throw new Error(result.error || '文章加载失败')
     }
     articles.value = result.data || []
+    console.log('获取到的文章:', articles.value)
     currentPage.value = 1
   } catch (err) {
     console.error('Blog fetch error:', err)
@@ -306,6 +308,11 @@ watch(totalPages, (newTotal) => {
   if (currentPage.value > newTotal) {
     currentPage.value = 1
   }
+})
+
+watch(selectedCategory, (newCategory) => {
+  console.log('选中的分类 changed to:', newCategory)
+  currentPage.value = 1 // 重置到第一页
 })
 
 const formatDate = (value) => {
