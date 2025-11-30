@@ -14,7 +14,7 @@
         <div class="flex items-center gap-2 md:gap-3">
           <!-- 文章总数 -->
           <div v-if="!loading && !error" class="glass-effect rounded-lg px-3 py-2 text-center card-hover">
-            <div class="text-lg md:text-xl font-bold text-tokyo-night-cyan">{{ articles.length }}</div>
+            <div class="text-lg md:text-xl font-bold text-tokyo-night-cyan">{{ filteredArticles.length }}</div>
             <div class="text-xs transition-colors" :class="isDark ? 'text-gray-400' : 'text-gray-600'">篇文章</div>
           </div>
           
@@ -41,35 +41,21 @@
       </div>
 
       <!-- 分类筛选 -->
-      <div v-if="!loading && !error" class="max-w-6xl mx-auto mb-6 md:mb-8">
+      <div class="mb-8 animate-fade-in max-w-6xl mx-auto">
         <div class="glass-effect rounded-2xl p-4">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <span class="text-sm font-medium transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
-              分类筛选：
-            </span>
-            <div class="flex flex-wrap gap-2">
-              <button
-                @click="selectedCategory = null"
-                class="px-3 py-1 text-sm rounded-full transition-all duration-300 font-medium"
-                :class="!selectedCategory 
-                  ? 'bg-tokyo-night-blue text-white' 
-                  : (isDark ? 'bg-tokyo-night-bg-highlight text-gray-300 hover:bg-tokyo-night-blue' : 'bg-gray-100 text-gray-700 hover:bg-blue-100')"
-              >
-                全部
-              </button>
-              <button
-                v-for="category in categories"
-                :key="category.id"
-                @click="selectedCategory = category.id"
-                class="px-3 py-1 text-sm rounded-full transition-all duration-300 font-medium"
-                :class="selectedCategory === category.id 
-                  ? 'bg-tokyo-night-blue text-white' 
-                  : (isDark ? 'bg-tokyo-night-bg-highlight text-gray-300 hover:bg-tokyo-night-blue' : 'bg-gray-100 text-gray-700 hover:bg-blue-100')"
-              >
-                {{ category.name }}
-                <span v-if="category.post_count > 0" class="ml-1 opacity-75">({{ category.post_count }})</span>
-              </button>
-            </div>
+          <div class="flex flex-wrap gap-2">
+            <button 
+              v-for="category in availableCategories" 
+              :key="category"
+              @click="selectedCategory = category"
+              :class="{
+                'bg-tokyo-night-blue text-white': selectedCategory === category,
+                'glass-effect text-tokyo-night-fg hover:bg-tokyo-night-blue/20': selectedCategory !== category
+              }"
+              class="px-4 py-2 rounded-full transition-all duration-300 font-medium border border-tokyo-night-blue/30 text-sm"
+            >
+              {{ category }}
+            </button>
           </div>
         </div>
       </div>
@@ -136,23 +122,11 @@
               {{ article.location }}
             </span>
             <!-- 分类 -->
-            <span v-if="article.categories && article.categories.length > 0" class="flex items-center gap-2">
+            <span v-if="article.category || (article.tags && article.tags.length > 0)" class="flex items-center gap-2">
               <span 
-                v-for="category in article.categories.slice(0, 2)" 
-                :key="category.id"
-                class="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-400 border border-green-500/30"
+                class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 border border-green-200"
               >
-                📁 {{ category.name }}
-              </span>
-            </span>
-            <!-- 标签 -->
-            <span v-if="article.tags && article.tags.length > 0" class="flex items-center gap-2">
-              <span 
-                v-for="tag in article.tags.slice(0, 2)" 
-                :key="tag"
-                class="px-2 py-1 text-xs rounded-full bg-tokyo-night-blue/20 text-tokyo-night-cyan border border-tokyo-night-blue/30"
-              >
-                {{ tag }}
+                {{ article.category || article.tags?.[0] || '未分类' }}
               </span>
             </span>
           </div>
@@ -222,22 +196,48 @@ const loading = ref(false)
 const error = ref('')
 const currentPage = ref(1)
 const pageSize = 6
-const categories = ref([])
-const selectedCategory = ref(null)
+const selectedCategory = ref('全部')
+
+// 获取所有可用分类
+const availableCategories = computed(() => {
+  const categories = new Set(['全部', '未分类'])
+  articles.value.forEach(article => {
+    if (article.category) {
+      categories.add(article.category)
+    } else if (article.tags && article.tags.length > 0) {
+      categories.add(article.tags[0])
+    } else {
+      categories.add('未分类')
+    }
+  })
+  return Array.from(categories)
+})
+
+// 筛选后的文章
+const filteredArticles = computed(() => {
+  if (selectedCategory.value === '全部') {
+    return articles.value
+  }
+  
+  return articles.value.filter(article => {
+    const category = article.category || article.tags?.[0] || '未分类'
+    return category === selectedCategory.value
+  })
+})
 
 const totalPages = computed(() => {
-  if (articles.value.length === 0) return 1
-  return Math.ceil(articles.value.length / pageSize)
+  if (filteredArticles.value.length === 0) return 1
+  return Math.ceil(filteredArticles.value.length / pageSize)
 })
 
 const displayedArticles = computed(() => {
   const start = (currentPage.value - 1) * pageSize
-  return articles.value.slice(start, start + pageSize)
+  return filteredArticles.value.slice(start, start + pageSize)
 })
 
 const latestArticleDate = computed(() => {
-  if (articles.value.length === 0) return '暂无'
-  const latest = articles.value.reduce((prev, current) => 
+  if (filteredArticles.value.length === 0) return '暂无'
+  const latest = filteredArticles.value.reduce((prev, current) => 
     new Date(prev.created_at) > new Date(current.created_at) ? prev : current
   )
   return formatDate(latest.created_at)
@@ -247,12 +247,7 @@ const fetchArticles = async () => {
   loading.value = true
   error.value = ''
   try {
-    let url = `${API_URL}?includeDrafts=false&limit=100`
-    if (selectedCategory.value) {
-      url += `&categoryId=${selectedCategory.value}`
-    }
-    
-    const response = await fetch(url)
+    const response = await fetch(`${API_URL}?includeDrafts=false&limit=100`)
     
     // 检查响应是否为JSON
     const contentType = response.headers.get('content-type')
@@ -275,31 +270,12 @@ const fetchArticles = async () => {
   }
 }
 
-const fetchCategories = async () => {
-  try {
-    const response = await fetch('/api/categories')
-    const result = await response.json()
-    if (result.success) {
-      categories.value = result.data
-    }
-  } catch (err) {
-    console.error('Categories fetch error:', err)
-  }
-}
+onMounted(fetchArticles)
 
-onMounted(() => {
-  fetchArticles()
-  fetchCategories()
-})
-
-watch(totalPages, (newTotal) => {
+watch([totalPages, selectedCategory], ([newTotal]) => {
   if (currentPage.value > newTotal) {
     currentPage.value = 1
   }
-})
-
-watch(selectedCategory, () => {
-  fetchArticles()
 })
 
 const formatDate = (value) => {

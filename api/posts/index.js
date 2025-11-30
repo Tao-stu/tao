@@ -43,6 +43,7 @@ export default async function handler(req, res) {
           content TEXT NOT NULL,
           location VARCHAR(120),
           cover TEXT,
+          category VARCHAR(100),
           tags JSONB DEFAULT '[]',
           status VARCHAR(20) DEFAULT 'published',
           published BOOLEAN DEFAULT TRUE,
@@ -90,6 +91,10 @@ export default async function handler(req, res) {
                           WHERE table_name='posts' AND column_name='summary') THEN
               ALTER TABLE posts ADD COLUMN summary TEXT;
             END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                          WHERE table_name='posts' AND column_name='category') THEN
+              ALTER TABLE posts ADD COLUMN category VARCHAR(100);
+            END IF;
           END $$;
         `);
       } catch (migrationError) {
@@ -103,7 +108,8 @@ export default async function handler(req, res) {
           { name: 'status', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT \'published\'' },
           { name: 'location', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS location VARCHAR(120)' },
           { name: 'cover', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS cover TEXT' },
-          { name: 'summary', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS summary TEXT' }
+          { name: 'summary', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS summary TEXT' },
+          { name: 'category', sql: 'ALTER TABLE posts ADD COLUMN IF NOT EXISTS category VARCHAR(100)' }
         ];
         
         for (const column of columnsToAdd) {
@@ -127,6 +133,7 @@ export default async function handler(req, res) {
           content TEXT NOT NULL,
           location VARCHAR(120),
           cover TEXT,
+          category VARCHAR(100),
           tags JSONB DEFAULT '[]',
           status VARCHAR(20) DEFAULT 'published',
           published BOOLEAN DEFAULT TRUE,
@@ -176,7 +183,8 @@ export default async function handler(req, res) {
         { name: 'status', type: 'VARCHAR(20) DEFAULT \'published\'' },
         { name: 'location', type: 'VARCHAR(120)' },
         { name: 'cover', type: 'TEXT' },
-        { name: 'summary', type: 'TEXT' }
+        { name: 'summary', type: 'TEXT' },
+        { name: 'category', type: 'VARCHAR(100)' }
       ];
       
       for (const column of columnsToCheck) {
@@ -325,110 +333,40 @@ export default async function handler(req, res) {
         // 获取所有文章
         const limit = Number(req.query.limit) || 50;
         const includeDrafts = req.query.includeDrafts !== 'false';
-        const categoryId = req.query.categoryId;
         
         let result;
-        if (categoryId) {
-          // 获取指定分类的文章
-          if (includeDrafts) {
-            if (pool) {
-              result = await pool.query(`
-                SELECT p.* FROM posts p
-                INNER JOIN post_categories pc ON p.id = pc.post_id
-                WHERE pc.category_id = $1
-                ORDER BY p.updated_at DESC
-                LIMIT $2
-              `, [categoryId, limit]);
-            } else {
-              result = await sql`
-                SELECT p.* FROM posts p
-                INNER JOIN post_categories pc ON p.id = pc.post_id
-                WHERE pc.category_id = ${categoryId}
-                ORDER BY p.updated_at DESC
-                LIMIT ${limit}
-              `;
-            }
-          } else {
-            if (pool) {
-              result = await pool.query(`
-                SELECT p.* FROM posts p
-                INNER JOIN post_categories pc ON p.id = pc.post_id
-                WHERE pc.category_id = $1 AND p.published = TRUE AND p.status = 'published'
-                ORDER BY p.updated_at DESC
-                LIMIT $2
-              `, [categoryId, limit]);
-            } else {
-              result = await sql`
-                SELECT p.* FROM posts p
-                INNER JOIN post_categories pc ON p.id = pc.post_id
-                WHERE pc.category_id = ${categoryId} AND p.published = TRUE AND p.status = 'published'
-                ORDER BY p.updated_at DESC
-                LIMIT ${limit}
-              `;
-            }
-          }
+        if (includeDrafts) {
+          result = await sql`
+            SELECT * FROM posts 
+            ORDER BY updated_at DESC
+            LIMIT ${limit}
+          `;
         } else {
-          // 获取所有文章
-          if (includeDrafts) {
-            result = await sql`
-              SELECT * FROM posts 
-              ORDER BY updated_at DESC
-              LIMIT ${limit}
-            `;
-          } else {
-            result = await sql`
-              SELECT * FROM posts 
-              WHERE published = TRUE AND status = 'published'
-              ORDER BY updated_at DESC
-              LIMIT ${limit}
-            `;
-          }
+          result = await sql`
+            SELECT * FROM posts 
+            WHERE published = TRUE AND status = 'published'
+            ORDER BY updated_at DESC
+            LIMIT ${limit}
+          `;
         }
         const rows = result.rows || result;
         
-        // 为每篇文章添加分类信息
-        const postsWithCategories = await Promise.all(
-          rows.map(async (post) => {
-            let categoriesResult;
-            if (pool) {
-              categoriesResult = await pool.query(`
-                SELECT c.* FROM categories c
-                INNER JOIN post_categories pc ON c.id = pc.category_id
-                WHERE pc.post_id = $1
-                ORDER BY c.id ASC
-              `, [post.id]);
-            } else {
-              categoriesResult = await sql`
-                SELECT c.* FROM categories c
-                INNER JOIN post_categories pc ON c.id = pc.category_id
-                WHERE pc.post_id = ${post.id}
-                ORDER BY c.id ASC
-              `;
-            }
-            const categories = categoriesResult.rows || categoriesResult;
-            
-            return {
-              ...post,
-              categories: categories
-            };
-          })
-        );
-        
         return res.status(200).json({
           success: true,
-          data: postsWithCategories
+          data: rows
         });
       }
     }
 
     // POST - 创建新文章
     if (req.method === 'POST') {
-      const { slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password } = req.body;
+      const { slug, title, summary, content, location, cover, category, tags, status, published, is_encrypted, access_password } = req.body;
       
       console.log('[API] POST /posts 请求', {
         slug,
         title,
         contentLength: content?.length || 0,
+        category,
         tags,
         status,
         hasAuth: !!req.headers.authorization,
@@ -479,8 +417,8 @@ export default async function handler(req, res) {
       let result;
       if (pool) {
         const insertQuery = `
-          INSERT INTO posts (slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password)
-          VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, $11)
+          INSERT INTO posts (slug, title, summary, content, location, cover, category, tags, status, published, is_encrypted, access_password)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12)
           RETURNING *
         `;
         const insertValues = [
@@ -490,6 +428,7 @@ export default async function handler(req, res) {
           content, 
           location || '', 
           cover || '', 
+          category || null,
           JSON.stringify(tagsArray), 
           status || 'published', 
           published !== false,
@@ -500,8 +439,8 @@ export default async function handler(req, res) {
       } else {
         // 使用 Vercel Postgres
         result = await sql`
-          INSERT INTO posts (slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password)
-          VALUES (${cleanSlug}, ${title}, ${summary || ''}, ${content}, ${location || ''}, ${cover || ''}, ${tagsArray}::jsonb, ${status || 'published'}, ${published !== false}, ${is_encrypted || false}, ${access_password || ''})
+          INSERT INTO posts (slug, title, summary, content, location, cover, category, tags, status, published, is_encrypted, access_password)
+          VALUES (${cleanSlug}, ${title}, ${summary || ''}, ${content}, ${location || ''}, ${cover || ''}, ${category || null}, ${tagsArray}::jsonb, ${status || 'published'}, ${published !== false}, ${is_encrypted || false}, ${access_password || ''})
           RETURNING *
         `;
       }
@@ -521,13 +460,14 @@ export default async function handler(req, res) {
 
     // PUT - 更新文章
     if (req.method === 'PUT') {
-      const { id, slug, title, summary, content, location, cover, tags, status, published, is_encrypted, access_password } = req.body;
+      const { id, slug, title, summary, content, location, cover, category, tags, status, published, is_encrypted, access_password } = req.body;
       
       console.log('[API] PUT /posts 请求', {
         id,
         slug,
         title,
         contentLength: content?.length || 0,
+        category,
         tags,
         status,
         hasAuth: !!req.headers.authorization,
@@ -598,6 +538,10 @@ export default async function handler(req, res) {
       if (cover !== undefined) {
         updateParts.push(`cover = $${paramIndex++}`);
         updateValues.push(cover || '');
+      }
+      if (category !== undefined) {
+        updateParts.push(`category = $${paramIndex++}`);
+        updateValues.push(category || null);
       }
       if (tags !== undefined) {
         const tagsArray = Array.isArray(tags) ? tags : [];
@@ -670,6 +614,10 @@ export default async function handler(req, res) {
               newUpdateParts.push(`cover = $${newParamIndex++}`);
               newUpdateValues.push(cover || '');
             }
+            if (category !== undefined) {
+              newUpdateParts.push(`category = $${newParamIndex++}`);
+              newUpdateValues.push(category || null);
+            }
             if (tags !== undefined) {
               const tagsArray = Array.isArray(tags) ? tags : [];
               newUpdateParts.push(`tags = $${newParamIndex++}::text[]`);
@@ -728,6 +676,9 @@ export default async function handler(req, res) {
         }
         if (cover !== undefined) {
           setParts.push(`cover = ${sql`${cover || ''}`}`);
+        }
+        if (category !== undefined) {
+          setParts.push(`category = ${sql`${category || null}`}`);
         }
         if (tags !== undefined) {
           const tagsJson = JSON.stringify(Array.isArray(tags) ? tags : []);
