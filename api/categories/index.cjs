@@ -31,10 +31,12 @@ async function getCategories(req, res) {
     console.log('获取分类列表...');
     
     // 返回模拟的分类数据
-    res.json({
+    const response = {
       success: true,
       data: categoriesData
-    });
+    };
+    console.log('发送响应:', JSON.stringify(response));
+    res.json(response);
     
   } catch (error) {
     console.error('获取分类失败:', error);
