@@ -1,4 +1,4 @@
-const { authenticate } = require('../utils/auth');
+// 认证函数已内联到module.exports中
 
 // 内存存储分类数据（临时解决方案）
 let categoriesData = [
