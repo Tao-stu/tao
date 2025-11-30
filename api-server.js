@@ -5,7 +5,14 @@ import { fileURLToPath } from 'url'
 import { config } from 'dotenv'
 
 // 加载环境变量
-config({ path: '.env.local' })
+// 优先尝试SQLite配置，如果不存在则使用原始配置
+try {
+  config({ path: '.env.sqlite' })
+  console.log('使用SQLite配置启动服务器')
+} catch (error) {
+  config({ path: '.env.local' })
+  console.log('使用原始配置启动服务器')
+}
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

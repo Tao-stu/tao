@@ -52,6 +52,9 @@ export default async function handler(req, res) {
         ('学习', '学习笔记和心得')
         ON CONFLICT (name) DO NOTHING
       `);
+    } else if (db.db) {
+      // SQLite - 表已通过 sqlite-db.js 创建
+      console.log('SQLite数据库，分类表已初始化');
     } else {
       await sql`
         CREATE TABLE IF NOT EXISTS categories (
@@ -86,6 +89,26 @@ export default async function handler(req, res) {
           GROUP BY c.id, c.name, c.description, c.created_at
           ORDER BY c.created_at ASC
         `);
+        const rows = result.rows;
+        
+        return res.status(200).json({
+          success: true,
+          data: rows
+        });
+      } else if (db.db) {
+        // SQLite
+        result = await db.db.all(`
+          SELECT c.*, COUNT(p.id) as post_count 
+          FROM categories c 
+          LEFT JOIN posts p ON c.id = p.category_id AND p.published = 1
+          GROUP BY c.id, c.name, c.description, c.created_at
+          ORDER BY c.created_at ASC
+        `);
+        
+        return res.status(200).json({
+          success: true,
+          data: result
+        });
       } else {
         result = await sql`
           SELECT c.*, COUNT(p.id) as post_count 
@@ -94,13 +117,13 @@ export default async function handler(req, res) {
           GROUP BY c.id, c.name, c.description, c.created_at
           ORDER BY c.created_at ASC
         `;
+        const rows = result.rows || result;
+        
+        return res.status(200).json({
+          success: true,
+          data: rows
+        });
       }
-      const rows = result.rows || result;
-      
-      return res.status(200).json({
-        success: true,
-        data: rows
-      });
     }
 
     // POST - 创建新分类
@@ -144,6 +167,34 @@ export default async function handler(req, res) {
         return res.status(201).json({
           success: true,
           data: rows[0]
+        });
+      } else if (db.db) {
+        // SQLite
+        const existing = await db.db.get(
+          'SELECT id FROM categories WHERE name = ? LIMIT 1',
+          [name]
+        );
+
+        if (existing) {
+          return res.status(409).json({
+            success: false,
+            error: '该分类名称已存在'
+          });
+        }
+
+        const result = await db.db.run(
+          'INSERT INTO categories (name, description) VALUES (?, ?)',
+          [name, description || '']
+        );
+        
+        const newCategory = await db.db.get(
+          'SELECT * FROM categories WHERE id = ?',
+          [result.lastID]
+        );
+        
+        return res.status(201).json({
+          success: true,
+          data: newCategory
         });
       } else {
         // 使用 Vercel Postgres
@@ -222,6 +273,41 @@ export default async function handler(req, res) {
           success: true,
           data: rows[0]
         });
+      } else if (db.db) {
+        // SQLite
+        const existing = await db.db.get(
+          'SELECT id FROM categories WHERE name = ? AND id != ? LIMIT 1',
+          [name, id]
+        );
+
+        if (existing) {
+          return res.status(409).json({
+            success: false,
+            error: '该分类名称已被其他分类使用'
+          });
+        }
+
+        const result = await db.db.run(
+          'UPDATE categories SET name = ?, description = ? WHERE id = ?',
+          [name, description || '', id]
+        );
+
+        if (result.changes === 0) {
+          return res.status(404).json({
+            success: false,
+            error: '分类不存在'
+          });
+        }
+
+        const updatedCategory = await db.db.get(
+          'SELECT * FROM categories WHERE id = ?',
+          [id]
+        );
+
+        return res.status(200).json({
+          success: true,
+          data: updatedCategory
+        });
       } else {
         // 使用 Vercel Postgres
         const existingResult = await sql`
@@ -291,6 +377,37 @@ export default async function handler(req, res) {
         const rowCount = deleteResult.rowCount;
 
         if (rowCount === 0) {
+          return res.status(404).json({
+            success: false,
+            error: '分类不存在'
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: '分类已删除'
+        });
+      } else if (db.db) {
+        // SQLite
+        const postsResult = await db.db.get(
+          'SELECT COUNT(*) as count FROM posts WHERE category_id = ?',
+          [id]
+        );
+        const postCount = postsResult.count;
+
+        if (postCount > 0) {
+          return res.status(400).json({
+            success: false,
+            error: `无法删除分类，还有 ${postCount} 篇文章使用此分类。请先将这些文章移到其他分类。`
+          });
+        }
+
+        const result = await db.db.run(
+          'DELETE FROM categories WHERE id = ?',
+          [id]
+        );
+
+        if (result.changes === 0) {
           return res.status(404).json({
             success: false,
             error: '分类不存在'
