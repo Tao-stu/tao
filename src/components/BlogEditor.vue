@@ -75,8 +75,8 @@
         ></textarea>
       </div>
 
-      <!-- 文章别名和标签 -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- 文章别名、分类和标签 -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- 文章别名 -->
         <div>
           <label class="block text-sm font-medium mb-2 transition-colors" 
@@ -102,25 +102,46 @@
         <div>
           <label class="block text-sm font-medium mb-2 transition-colors" 
                  :class="isDark ? 'text-white' : 'text-gray-800'">
-            分类
+            分类 *
           </label>
           <select 
-            v-model="formData.category"
+            v-model="formData.category_id"
+            required
             class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
             :class="isDark 
               ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white' 
               : 'bg-white border-gray-300 text-gray-900'"
           >
-            <option value="">请选择分类</option>
-            <option value="未分类">未分类</option>
-            <option value="技术">技术</option>
-            <option value="生活">生活</option>
-            <option value="随笔">随笔</option>
-            <option value="教程">教程</option>
+            <option value="">选择分类</option>
+            <option 
+              v-for="category in categories" 
+              :key="category.id" 
+              :value="category.id"
+            >
+              {{ category.name }}
+            </option>
           </select>
-          <div v-if="formData.category" class="mt-2">
-            <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-              {{ formData.category }}
+        </div>
+
+        <!-- 标签 -->
+        <div>
+          <label class="block text-sm font-medium mb-2 transition-colors" 
+                 :class="isDark ? 'text-white' : 'text-gray-800'">
+            标签
+          </label>
+          <input 
+            type="text" 
+            v-model="tagsInput"
+            placeholder="输入标签，用逗号分隔"
+            class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            :class="isDark 
+              ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
+              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
+          />
+          <div v-if="formData.tags.length > 0" class="mt-2 flex flex-wrap gap-2">
+            <span v-for="tag in formData.tags" :key="tag" 
+                  class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+              {{ tag }}
             </span>
           </div>
         </div>
@@ -130,9 +151,10 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import { markdownToHtml } from '../utils/markdown'
+import axios from 'axios'
 
 const { isDark } = useTheme()
 
@@ -153,6 +175,7 @@ const emit = defineEmits(['save', 'cancel'])
 
 // 响应式数据
 const showOptionalFields = ref(false)
+const categories = ref([])
 const formData = ref({
   title: '',
   slug: '',
@@ -160,9 +183,12 @@ const formData = ref({
   content: '',
   location: '',
   cover: '',
-  category: '',
+  tags: [],
+  category_id: 1,
   status: 'draft'
 })
+
+const tagsInput = ref('')
 
 // 方法定义（必须在watch之前，避免初始化错误）
 const resetForm = () => {
@@ -173,9 +199,11 @@ const resetForm = () => {
     content: '',
     location: '',
     cover: '',
-    category: '',
+    tags: [],
+    category_id: 1,
     status: 'draft'
   }
+  tagsInput.value = ''
   showOptionalFields.value = false
 }
 
@@ -204,9 +232,11 @@ watch(() => props.post, (newPost) => {
       content: newPost.content || '',
       location: newPost.location || '',
       cover: newPost.cover || '',
-      category: newPost.category || newPost.tags?.[0] || '未分类',
+      tags: Array.isArray(newPost.tags) ? [...newPost.tags] : [],
+      category_id: newPost.category_id || 1,
       status: newPost.status || (newPost.published ? 'published' : 'draft')
     }
+    tagsInput.value = formData.value.tags.join(', ')
     showOptionalFields.value = !!(newPost.slug || newPost.location || newPost.cover)
     
     console.log('[BlogEditor] 表单数据已更新', {
@@ -232,7 +262,27 @@ watch(() => props.post, (newPost) => {
   }
 }, { immediate: true, deep: true })
 
+watch(tagsInput, (newValue) => {
+  formData.value.tags = newValue
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(tag => tag.length > 0)
+})
 
+// 获取分类列表
+const fetchCategories = async () => {
+  try {
+    const response = await axios.get('/api/categories')
+    if (response.data.success) {
+      categories.value = response.data.data
+    }
+  } catch (error) {
+    console.error('获取分类列表失败:', error)
+  }
+}
+
+// 组件挂载时获取分类列表
+onMounted(fetchCategories)
 
 // 方法
 
@@ -272,7 +322,7 @@ const saveDraft = () => {
   console.log('[BlogEditor] saveDraft 开始执行', {
     title: formData.value.title,
     contentLength: formData.value.content?.length || 0,
-    category: formData.value.category,
+    tags: formData.value.tags,
     status: 'draft'
   })
   
@@ -292,8 +342,7 @@ const saveDraft = () => {
     ...formData.value,
     slug: finalSlug,
     published: false,
-    status: 'draft',
-    tags: formData.value.category ? [formData.value.category] : []
+    status: 'draft'
   }
   
   console.log('[BlogEditor] 发送保存草稿事件', {
@@ -331,8 +380,7 @@ const publish = () => {
     ...formData.value,
     slug: finalSlug,
     published: true,
-    status: 'published',
-    tags: formData.value.category ? [formData.value.category] : []
+    status: 'published'
   }
   
   console.log('[BlogEditor] 发送发布事件', {

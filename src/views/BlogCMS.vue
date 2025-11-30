@@ -90,6 +90,15 @@
                 📝 文章
               </button>
               <button
+                @click="activeTab = 'categories'; showMobileMenu = false"
+                class="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm font-medium"
+                :class="activeTab === 'categories'
+                  ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
+                  : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
+              >
+                📁 分类
+              </button>
+              <button
                 @click="activeTab = 'guestbook'; showMobileMenu = false"
                 class="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm font-medium"
                 :class="activeTab === 'guestbook'
@@ -97,15 +106,6 @@
                   : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
               >
                 💬 留言
-              </button>
-              <button
-                @click="activeTab = 'categories'; showMobileMenu = false"
-                class="w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm font-medium"
-                :class="activeTab === 'categories'
-                  ? (isDark ? 'bg-tokyo-night-blue text-white' : 'bg-blue-600 text-white')
-                  : (isDark ? 'text-gray-300 hover:bg-tokyo-night-bg-highlight' : 'text-gray-700 hover:bg-gray-100')"
-              >
-                🏷️ 分类
               </button>
               <button
                 @click="activeTab = 'backup'; showMobileMenu = false"
@@ -230,15 +230,17 @@
                           🔗 {{ post.slug || '无' }}
                         </span>
                       </div>
-                      <!-- 分类显示 -->
-                      <div v-if="post.category || (post.tags && post.tags.length > 0)" class="flex flex-wrap gap-2 mt-2">
+                      <!-- 标签显示 -->
+                      <div v-if="post.tags && post.tags.length > 0" class="flex flex-wrap gap-2 mt-2">
                         <span 
+                          v-for="tag in post.tags" 
+                          :key="tag"
                           class="px-2 py-1 text-xs rounded-full"
                           :class="isDark 
-                            ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                            : 'bg-green-100 text-green-600 border border-green-200'"
+                            ? 'bg-tokyo-night-blue/20 text-tokyo-night-cyan border border-tokyo-night-blue/30' 
+                            : 'bg-blue-100 text-blue-600 border border-blue-200'"
                         >
-                          {{ post.category || post.tags[0] || '未分类' }}
+                          {{ tag }}
                         </span>
                       </div>
                       <!-- 摘要预览 -->
@@ -279,6 +281,158 @@
               @save="savePost"
               @cancel="showEditor = false; editingPost = null"
             />
+          </div>
+
+          <!-- 分类管理 -->
+          <div v-if="activeTab === 'categories'">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <h1 class="text-2xl sm:text-3xl font-bold title-reveal">
+                分类管理
+              </h1>
+              <button 
+                @click="showCategoryForm = true; editingCategory = null"
+                class="w-full sm:w-auto px-6 py-2 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base"
+                :class="isDark 
+                  ? 'bg-tokyo-night-blue hover:bg-tokyo-night-blue0 text-white' 
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'"
+              >
+                ➕ 新建分类
+              </button>
+            </div>
+
+            <!-- 分类列表 -->
+            <div v-if="!showCategoryForm" class="space-y-4">
+              <!-- 加载状态 -->
+              <div v-if="isLoadingCategories" class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2" 
+                     :class="isDark ? 'border-tokyo-night-cyan' : 'border-blue-600'"></div>
+                <p class="mt-4 transition-colors" :class="isDark ? 'text-gray-400' : 'text-gray-600'">加载中...</p>
+              </div>
+              
+              <!-- 空状态 -->
+              <div v-else-if="categories.length === 0" class="text-center py-12">
+                <p class="transition-colors" :class="isDark ? 'text-gray-400' : 'text-gray-600'">
+                  还没有分类，点击"新建分类"开始创建吧！
+                </p>
+              </div>
+              
+              <!-- 分类卡片列表 -->
+              <div 
+                v-else
+                v-for="category in categories" 
+                :key="category.id"
+                class="glass-effect rounded-2xl p-4 sm:p-6 hover:shadow-lg transition-all"
+              >
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div class="flex-1">
+                    <h3 class="text-lg font-semibold mb-2 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
+                      {{ category.name }}
+                    </h3>
+                    <p v-if="category.description" class="text-sm mb-3 transition-colors" :class="isDark ? 'text-gray-300' : 'text-gray-600'">
+                      {{ category.description }}
+                    </p>
+                    <div class="flex items-center gap-4 text-sm">
+                      <span class="transition-colors" :class="isDark ? 'text-gray-400' : 'text-gray-600'">
+                        📄 {{ category.post_count || 0 }} 篇文章
+                      </span>
+                      <span class="transition-colors" :class="isDark ? 'text-gray-400' : 'text-gray-600'">
+                        📅 {{ formatDate(category.created_at) }}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div class="flex gap-2 w-full sm:w-auto">
+                    <button 
+                      @click="editCategory(category)"
+                      :disabled="isLoadingCategories"
+                      class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                      :class="isDark 
+                        ? 'bg-tokyo-night-bg-highlight text-tokyo-night-cyan hover:bg-tokyo-night-blue' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                    >
+                      ✏️ 编辑
+                    </button>
+                    <button 
+                      @click="deleteCategory(category)"
+                      :disabled="isLoadingCategories || category.post_count > 0"
+                      class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                      :class="category.post_count > 0
+                        ? 'bg-gray-400 text-white cursor-not-allowed'
+                        : (isDark 
+                          ? 'bg-red-900/50 text-red-400 hover:bg-red-900' 
+                          : 'bg-red-100 text-red-600 hover:bg-red-200')"
+                    >
+                      🗑️ 删除
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 分类表单 -->
+            <div v-else class="glass-effect rounded-2xl p-6">
+              <h2 class="text-xl font-semibold mb-6 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
+                {{ editingCategory ? '编辑分类' : '新建分类' }}
+              </h2>
+              
+              <form @submit.prevent="saveCategory" class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-2 transition-colors" 
+                         :class="isDark ? 'text-white' : 'text-gray-800'">
+                    分类名称 *
+                  </label>
+                  <input 
+                    type="text"
+                    v-model="categoryForm.name"
+                    required
+                    placeholder="请输入分类名称"
+                    class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    :class="isDark 
+                      ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
+                  />
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium mb-2 transition-colors" 
+                         :class="isDark ? 'text-white' : 'text-gray-800'">
+                    分类描述
+                  </label>
+                  <textarea 
+                    v-model="categoryForm.description"
+                    placeholder="请输入分类描述（可选）"
+                    rows="3"
+                    class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
+                    :class="isDark 
+                      ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
+                  ></textarea>
+                </div>
+                
+                <div class="flex gap-3">
+                  <button 
+                    type="submit"
+                    :disabled="isSavingCategory || !categoryForm.name.trim()"
+                    class="flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-300 disabled:opacity-50"
+                    :class="isDark 
+                      ? 'bg-tokyo-night-blue hover:bg-tokyo-night-blue0 text-white' 
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'"
+                  >
+                    {{ isSavingCategory ? '保存中...' : (editingCategory ? '更新分类' : '创建分类') }}
+                  </button>
+                  <button 
+                    type="button"
+                    @click="showCategoryForm = false; editingCategory = null; categoryForm = { name: '', description: '' }"
+                    class="px-6 py-3 rounded-lg font-medium transition-all duration-300"
+                    :class="isDark 
+                      ? 'bg-gray-600 hover:bg-gray-700 text-white' 
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'"
+                  >
+                    取消
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
 
           <!-- 留言管理 -->
@@ -369,180 +523,6 @@
                 <div v-if="restoreSuccess" class="mt-4 p-3 rounded-lg border border-green-300 bg-green-50 text-green-600">
                   {{ restoreSuccess }}
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 分类管理 -->
-          <div v-if="activeTab === 'categories'">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              <h1 class="text-2xl sm:text-3xl font-bold title-reveal">
-                🏷️ 分类管理
-              </h1>
-              <button 
-                @click="showCategoryEditor = true; editingCategory = null"
-                class="w-full sm:w-auto px-6 py-2 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base"
-                :class="isDark 
-                  ? 'bg-tokyo-night-blue hover:bg-tokyo-night-blue0 text-white' 
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'"
-              >
-                ➕ 添加新分类
-              </button>
-            </div>
-
-            <!-- 分类列表 -->
-            <div v-if="!showCategoryEditor" class="space-y-4">
-              <!-- 搜索和筛选 -->
-              <div class="glass-effect rounded-2xl p-4">
-                <div class="flex flex-col sm:flex-row gap-4">
-                  <input 
-                    type="text"
-                    v-model="categorySearchQuery"
-                    placeholder="搜索分类名称..."
-                    class="flex-1 px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm"
-                    :class="isDark 
-                      ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-                  />
-                </div>
-              </div>
-
-              <!-- 加载状态 -->
-              <div v-if="isLoading && categories.length === 0" class="text-center py-12">
-                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2" 
-                     :class="isDark ? 'border-tokyo-night-cyan' : 'border-blue-600'"></div>
-                <p class="mt-4 transition-colors" :class="isDark ? 'text-gray-400' : 'text-gray-600'">加载中...</p>
-              </div>
-              
-              <!-- 空状态 -->
-              <div v-else-if="filteredCategories.length === 0" class="text-center py-12">
-                <p class="transition-colors" :class="isDark ? 'text-gray-400' : 'text-gray-600'">
-                  {{ categorySearchQuery ? '没有找到匹配的分类' : '还没有分类，点击"添加新分类"开始创建吧！' }}
-                </p>
-              </div>
-              
-              <!-- 分类列表 -->
-              <div 
-                v-else
-                v-for="category in filteredCategories" 
-                :key="category.id"
-                class="glass-effect rounded-2xl p-4 sm:p-6 hover:shadow-lg transition-all"
-              >
-                <div class="flex flex-col gap-4">
-                  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div class="flex-1 min-w-0">
-                      <h3 class="text-lg sm:text-xl font-semibold mb-2 transition-colors break-words" 
-                          :class="isDark ? 'text-white' : 'text-gray-800'">
-                        {{ category.name }}
-                      </h3>
-                      <div class="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm transition-colors mb-2" 
-                           :class="isDark ? 'text-gray-400' : 'text-gray-600'">
-                        <span class="flex items-center gap-1">
-                          📅 {{ formatDate(category.created_at) }}
-                        </span>
-                        <span class="flex items-center gap-1" 
-                              :class="isDark ? 'text-blue-400' : 'text-blue-600'">
-                          📄 {{ category.post_count || 0 }} 篇文章
-                        </span>
-                        <span v-if="category.description" class="flex items-center gap-1">
-                          📝 {{ category.description }}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="flex gap-2 w-full sm:w-auto">
-                      <button 
-                        @click="editCategory(category)"
-                        :disabled="isLoading"
-                        class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
-                        :class="isDark 
-                          ? 'bg-tokyo-night-bg-highlight text-tokyo-night-cyan hover:bg-tokyo-night-blue' 
-                          : 'bg-blue-100 text-blue-600 hover:bg-blue-200'"
-                      >
-                        ✏️ 编辑
-                      </button>
-                      <button 
-                        @click="deleteCategory(category)"
-                        :disabled="isLoading || ['未分类', '全部'].includes(category.name)"
-                        class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-all disabled:opacity-50"
-                      >
-                        🗑️ 删除
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 分类编辑器 -->
-            <div v-if="showCategoryEditor" class="glass-effect rounded-3xl p-4 sm:p-6 md:p-8">
-              <h2 class="text-xl sm:text-2xl font-bold mb-6 transition-colors" :class="isDark ? 'text-white' : 'text-gray-800'">
-                {{ editingCategory ? '✏️ 编辑分类' : '➕ 添加新分类' }}
-              </h2>
-              
-              <form @submit.prevent="saveCategory" class="space-y-4 max-w-2xl">
-                <div>
-                  <label class="block text-sm font-medium mb-2 transition-colors" 
-                         :class="isDark ? 'text-white' : 'text-gray-800'">
-                    分类名称 *
-                  </label>
-                  <input 
-                    type="text" 
-                    v-model="categoryForm.name"
-                    required
-                    placeholder="请输入分类名称"
-                    class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                    :class="isDark 
-                      ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-                  />
-                </div>
-                
-                <div>
-                  <label class="block text-sm font-medium mb-2 transition-colors" 
-                         :class="isDark ? 'text-white' : 'text-gray-800'">
-                    分类描述
-                  </label>
-                  <textarea 
-                    v-model="categoryForm.description"
-                    placeholder="请输入分类描述（可选）"
-                    rows="3"
-                    class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
-                    :class="isDark 
-                      ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-                  />
-                </div>
-                
-                <div class="flex gap-3">
-                  <button 
-                    type="submit"
-                    :disabled="isLoading || !categoryForm.name.trim()"
-                    class="flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-300 disabled:opacity-50"
-                    :class="isDark 
-                      ? 'bg-tokyo-night-blue hover:bg-tokyo-night-blue0 text-white' 
-                      : 'bg-blue-600 hover:bg-blue-700 text-white'"
-                  >
-                    {{ isLoading ? '保存中...' : (editingCategory ? '更新分类' : '添加分类') }}
-                  </button>
-                  
-                  <button 
-                    type="button"
-                    @click="cancelCategoryEdit"
-                    class="flex-1 px-6 py-3 rounded-lg font-medium transition-all duration-300"
-                    :class="isDark 
-                      ? 'bg-gray-600 hover:bg-gray-700 text-white' 
-                      : 'bg-gray-500 hover:bg-gray-600 text-white'"
-                  >
-                    取消
-                  </button>
-                </div>
-              </form>
-              
-              <div v-if="categoryMessage" class="mt-4 p-3 rounded-lg border" 
-                   :class="categoryMessageType === 'success' 
-                     ? 'border-green-300 bg-green-50 text-green-600' 
-                     : 'border-red-300 bg-red-50 text-red-600'">
-                {{ categoryMessage }}
               </div>
             </div>
           </div>
@@ -663,7 +643,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useTheme } from '../composables/useTheme'
 import BlogEditor from '../components/BlogEditor.vue'
 import GuestbookAdmin from '../components/GuestbookAdmin.vue'
@@ -715,19 +695,18 @@ const backupSuccess = ref('')
 const isRestoring = ref(false)
 const restoreError = ref('')
 const restoreSuccess = ref('')
+const backupFile = ref(null)
 
-// 分类管理相关
+// 分类管理数据
 const categories = ref([])
-const categorySearchQuery = ref('')
-const showCategoryEditor = ref(false)
+const isLoadingCategories = ref(false)
+const showCategoryForm = ref(false)
 const editingCategory = ref(null)
+const isSavingCategory = ref(false)
 const categoryForm = ref({
   name: '',
   description: ''
 })
-const categoryMessage = ref('')
-const categoryMessageType = ref('success')
-const backupFile = ref(null)
 
 
 
@@ -809,7 +788,6 @@ const filteredPosts = computed(() => {
       post.content?.toLowerCase().includes(query) ||
       post.summary?.toLowerCase().includes(query) ||
       post.slug?.toLowerCase().includes(query) ||
-      (post.category && post.category.toLowerCase().includes(query)) ||
       (Array.isArray(post.tags) && post.tags.some(tag => tag.toLowerCase().includes(query)))
     )
   }
@@ -817,13 +795,123 @@ const filteredPosts = computed(() => {
   return filtered
 })
 
+// 获取分类列表
+const fetchCategories = async () => {
+  try {
+    isLoadingCategories.value = true
+    const response = await axios.get('/api/categories', {
+      headers: createAuthHeaders()
+    })
+    
+    if (response.data.success) {
+      categories.value = response.data.data
+    }
+  } catch (error) {
+    console.error('获取分类列表失败:', error)
+    if (error.response?.status === 401) {
+      alert('登录已过期，请重新登录')
+    }
+  } finally {
+    isLoadingCategories.value = false
+  }
+}
+
+// 保存分类
+const saveCategory = async () => {
+  if (!categoryForm.value.name.trim()) {
+    alert('请输入分类名称')
+    return
+  }
+  
+  try {
+    isSavingCategory.value = true
+    
+    let response
+    if (editingCategory.value) {
+      // 更新分类
+      response = await axios.put('/api/categories', {
+        id: editingCategory.value.id,
+        ...categoryForm.value
+      }, {
+        headers: createAuthHeaders()
+      })
+    } else {
+      // 创建新分类
+      response = await axios.post('/api/categories', categoryForm.value, {
+        headers: createAuthHeaders()
+      })
+    }
+    
+    if (response.data.success) {
+      alert(editingCategory.value ? '分类更新成功！' : '分类创建成功！')
+      await fetchCategories()
+      showCategoryForm.value = false
+      editingCategory.value = null
+      categoryForm.value = { name: '', description: '' }
+    } else {
+      throw new Error(response.data.error || '操作失败')
+    }
+  } catch (error) {
+    console.error('保存分类失败:', error)
+    alert(error.response?.data?.error || error.message || '保存分类失败')
+  } finally {
+    isSavingCategory.value = false
+  }
+}
+
+// 编辑分类
+const editCategory = (category) => {
+  editingCategory.value = category
+  categoryForm.value = {
+    name: category.name,
+    description: category.description || ''
+  }
+  showCategoryForm.value = true
+}
+
+// 删除分类
+const deleteCategory = async (category) => {
+  if (category.post_count > 0) {
+    alert(`无法删除分类"${category.name}"，还有 ${category.post_count} 篇文章使用此分类。请先将这些文章移到其他分类。`)
+    return
+  }
+  
+  if (!confirm(`确定要删除分类"${category.name}"吗？此操作不可恢复。`)) {
+    return
+  }
+  
+  try {
+    const response = await axios.delete(`/api/categories?id=${category.id}`, {
+      headers: createAuthHeaders()
+    })
+    
+    if (response.data.success) {
+      alert('分类已删除')
+      await fetchCategories()
+    } else {
+      throw new Error(response.data.error || '删除失败')
+    }
+  } catch (error) {
+    console.error('删除分类失败:', error)
+    alert(error.response?.data?.error || error.message || '删除分类失败')
+  }
+}
+
+// 格式化日期
+const formatDate = (value) => {
+  if (!value) return '未知日期'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
 // 检查认证状态
 onMounted(async () => {
   const authToken = localStorage.getItem('blog_admin_token')
   if (authToken) {
     // 验证token有效性（简单检查，实际验证在API端）
     isAuthenticated.value = true
-    await fetchPosts()
+    await Promise.all([fetchPosts(), fetchCategories()])
   }
 })
 
@@ -1361,224 +1449,6 @@ const onFileSelect = (event) => {
     restoreError.value = ''
     restoreSuccess.value = ''
   }
-}
-
-// 分类管理方法
-const loadCategories = async () => {
-  try {
-    isLoading.value = true
-    categoryMessage.value = ''
-    
-    const response = await axios.get(`${API_BASE}/categories`, {
-      headers: createAuthHeaders()
-    })
-    
-    if (response.data.success) {
-      categories.value = response.data.data
-      console.log('[BlogCMS] 分类列表加载成功', {
-        count: categories.value.length,
-        categories: categories.value.map(c => ({
-          name: c.name,
-          post_count: c.post_count
-        }))
-      })
-    } else {
-      throw new Error(response.data.error || '加载分类失败')
-    }
-    
-  } catch (error) {
-    console.error('加载分类失败:', error)
-    categoryMessage.value = error.response?.data?.error || '加载分类失败，请稍后重试'
-    categoryMessageType.value = 'error'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// 筛选后的分类列表
-const filteredCategories = computed(() => {
-  let filtered = categories.value
-  
-  // 按搜索关键词筛选
-  if (categorySearchQuery.value) {
-    const query = categorySearchQuery.value.toLowerCase()
-    filtered = filtered.filter(category => 
-      category.name?.toLowerCase().includes(query) ||
-      category.description?.toLowerCase().includes(query)
-    )
-  }
-  
-  return filtered
-})
-
-const editCategory = (category) => {
-  editingCategory.value = category
-  categoryForm.value = {
-    name: category.name,
-    description: category.description || ''
-  }
-  showCategoryEditor.value = true
-}
-
-const saveCategory = async () => {
-  if (!categoryForm.value.name.trim()) {
-    categoryMessage.value = '请输入分类名称'
-    categoryMessageType.value = 'error'
-    return
-  }
-
-  try {
-    isLoading.value = true
-    categoryMessage.value = ''
-    
-    const categoryName = categoryForm.value.name.trim()
-    
-    if (editingCategory.value) {
-      // 更新现有分类
-      if (editingCategory.value.name === '未分类') {
-        categoryMessage.value = '系统默认分类不可修改'
-        categoryMessageType.value = 'error'
-        return
-      }
-      
-      const response = await axios.put(`${API_BASE}/categories`, {
-        oldName: editingCategory.value.name,
-        newName: categoryName
-      }, {
-        headers: createAuthHeaders()
-      })
-      
-      if (response.data.success) {
-        categoryMessage.value = response.data.data.message
-        categoryMessageType.value = 'success'
-        
-        // 刷新分类列表和文章列表
-        await loadCategories()
-        await fetchPosts()
-      } else {
-        throw new Error(response.data.error || '更新分类失败')
-      }
-    } else {
-      // 添加新分类（通过创建一篇草稿文章来实现）
-      if (categories.value.some(cat => cat.name === categoryName)) {
-        categoryMessage.value = '分类已存在'
-        categoryMessageType.value = 'error'
-        return
-      }
-      
-      // 创建一篇临时草稿文章来建立新分类
-      const tempPostData = {
-        title: `[分类] ${categoryName}`,
-        content: `这是分类 "${categoryName}" 的占位文章，可以删除。`,
-        status: 'draft',
-        summary: `分类 ${categoryName} 的占位文章`,
-        tags: [categoryName],
-        slug: `category-${categoryName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`
-      }
-      
-      const response = await axios.post(`${API_BASE}/posts`, tempPostData, {
-        headers: createAuthHeaders()
-      })
-      
-      if (response.data.success) {
-        categoryMessage.value = `分类 "${categoryName}" 添加成功`
-        categoryMessageType.value = 'success'
-        
-        // 刷新分类列表和文章列表
-        await loadCategories()
-        await fetchPosts()
-      } else {
-        throw new Error(response.data.error || '添加分类失败')
-      }
-    }
-    
-    cancelCategoryEdit()
-    
-    // 3秒后清除消息
-    setTimeout(() => {
-      categoryMessage.value = ''
-    }, 3000)
-    
-  } catch (error) {
-    console.error('保存分类失败:', error)
-    categoryMessage.value = error.response?.data?.error || '保存分类失败，请稍后重试'
-    categoryMessageType.value = 'error'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-const cancelCategoryEdit = () => {
-  showCategoryEditor.value = false
-  editingCategory.value = null
-  categoryForm.value = {
-    name: '',
-    description: ''
-  }
-  categoryMessage.value = ''
-}
-
-const deleteCategory = async (category) => {
-  if (['未分类'].includes(category.name)) {
-    categoryMessage.value = '系统默认分类不可删除'
-    categoryMessageType.value = 'error'
-    return
-  }
-
-  if (!confirm(`确定要删除分类 "${category.name}" 吗？\n\n删除后，使用此分类的 ${category.post_count} 篇文章将变为"未分类"。`)) {
-    return
-  }
-
-  try {
-    isLoading.value = true
-    categoryMessage.value = ''
-    
-    const response = await axios.delete(`${API_BASE}/categories`, {
-      data: { categoryName: category.name }
-    }, {
-      headers: createAuthHeaders()
-    })
-    
-    if (response.data.success) {
-      categoryMessage.value = response.data.data.message
-      categoryMessageType.value = 'success'
-      
-      // 刷新分类列表和文章列表
-      await loadCategories()
-      await fetchPosts()
-    } else {
-      throw new Error(response.data.error || '删除分类失败')
-    }
-    
-    // 3秒后清除消息
-    setTimeout(() => {
-      categoryMessage.value = ''
-    }, 3000)
-    
-  } catch (error) {
-    console.error('删除分类失败:', error)
-    categoryMessage.value = error.response?.data?.error || '删除分类失败，请稍后重试'
-    categoryMessageType.value = 'error'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// 监听activeTab变化，切换到分类时自动加载
-watch(activeTab, (newTab) => {
-  if (newTab === 'categories') {
-    loadCategories()
-  }
-})
-
-// 格式化日期
-const formatDate = (dateString) => {
-  if (!dateString) return '未知'
-  return new Date(dateString).toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  })
 }
 
 

@@ -107,6 +107,17 @@ app.all('/api/posts/:slug', async (req, res) => {
   }
 })
 
+// 分类API - 支持所有HTTP方法
+app.all('/api/categories', async (req, res) => {
+  try {
+    const categoriesHandler = await import('./api/categories/index.js')
+    return categoriesHandler.default(req, res)
+  } catch (error) {
+    console.error('Categories API error:', error)
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
 // 消息API - 支持所有HTTP方法
 app.all('/api/messages', async (req, res) => {
   try {
@@ -158,18 +169,6 @@ app.all('/api/posts/:slug/content', async (req, res) => {
     return contentHandler.default(req, res)
   } catch (error) {
     console.error('Content API error:', error)
-    res.status(500).json({ success: false, error: error.message })
-  }
-})
-
-// 分类API - 支持所有HTTP方法
-app.all('/api/categories', async (req, res) => {
-  try {
-    const categoriesModule = await import('./api/categories/index.cjs')
-    const categoriesHandler = categoriesModule.default || categoriesModule
-    return categoriesHandler(req, res)
-  } catch (error) {
-    console.error('Categories API error:', error)
     res.status(500).json({ success: false, error: error.message })
   }
 })
