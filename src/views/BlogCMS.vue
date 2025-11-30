@@ -332,9 +332,6 @@
                     <div class="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm transition-colors mb-2" 
                          :class="isDark ? 'text-gray-400' : 'text-gray-600'">
                       <span class="flex items-center gap-1">
-                        🔗 {{ category.slug }}
-                      </span>
-                      <span class="flex items-center gap-1">
                         📝 {{ category.post_count || 0 }} 篇文章
                       </span>
                       <span class="flex items-center gap-1">
@@ -382,44 +379,21 @@
               </h2>
               
               <form @submit.prevent="saveCategory" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label class="block text-sm font-medium mb-2 transition-colors" 
-                           :class="isDark ? 'text-white' : 'text-gray-800'">
-                      分类名称 *
-                    </label>
-                    <input 
-                      type="text" 
-                      v-model="categoryForm.name"
-                      required
-                      placeholder="输入分类名称"
-                      class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                      :class="isDark 
-                        ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label class="block text-sm font-medium mb-2 transition-colors" 
-                           :class="isDark ? 'text-white' : 'text-gray-800'">
-                      分类别名 *
-                    </label>
-                    <input 
-                      type="text" 
-                      v-model="categoryForm.slug"
-                      required
-                      placeholder="输入分类别名"
-                      class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                      :class="isDark 
-                        ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
-                    />
-                    <p class="mt-1 text-xs transition-colors" 
-                       :class="isDark ? 'text-gray-400' : 'text-gray-500'">
-                      用于URL路径，只能包含小写字母、数字和连字符
-                    </p>
-                  </div>
+                <div>
+                  <label class="block text-sm font-medium mb-2 transition-colors" 
+                         :class="isDark ? 'text-white' : 'text-gray-800'">
+                    分类名称 *
+                  </label>
+                  <input 
+                    type="text" 
+                    v-model="categoryForm.name"
+                    required
+                    placeholder="输入分类名称"
+                    class="w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    :class="isDark 
+                      ? 'bg-tokyo-night-bg-highlight border-tokyo-night-blue text-white placeholder-gray-400' 
+                      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'"
+                  />
                 </div>
                 
                 <div>
@@ -441,7 +415,7 @@
                 <div class="flex gap-2">
                   <button 
                     type="button"
-                    @click="showCategoryForm = false; editingCategory = null; categoryForm = { name: '', slug: '', description: '' }"
+                    @click="showCategoryForm = false; editingCategory = null; categoryForm = { name: '', description: '' }"
                     class="px-4 py-2 rounded-lg border font-medium transition-all"
                     :class="isDark 
                       ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
@@ -713,7 +687,6 @@ const editingCategory = ref(null)
 const isSavingCategory = ref(false)
 const categoryForm = ref({
   name: '',
-  slug: '',
   description: ''
 })
 
@@ -852,7 +825,6 @@ const editCategory = (category) => {
   editingCategory.value = category
   categoryForm.value = {
     name: category.name,
-    slug: category.slug,
     description: category.description || ''
   }
   showCategoryForm.value = true
@@ -864,15 +836,8 @@ const saveCategory = async () => {
     isSavingCategory.value = true
     
     // 验证表单
-    if (!categoryForm.value.name.trim() || !categoryForm.value.slug.trim()) {
-      alert('分类名称和别名不能为空')
-      return
-    }
-    
-    // 验证slug格式
-    const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-    if (!slugRegex.test(categoryForm.value.slug)) {
-      alert('分类别名只能包含小写字母、数字和连字符，且不能以连字符开头或结尾')
+    if (!categoryForm.value.name.trim()) {
+      alert('分类名称不能为空')
       return
     }
     
@@ -897,7 +862,7 @@ const saveCategory = async () => {
       await fetchCategories()
       showCategoryForm.value = false
       editingCategory.value = null
-      categoryForm.value = { name: '', slug: '', description: '' }
+      categoryForm.value = { name: '', description: '' }
     } else {
       throw new Error(response.data.error || '操作失败')
     }

@@ -39,7 +39,6 @@ export default async function handler(req, res) {
         CREATE TABLE IF NOT EXISTS categories (
           id SERIAL PRIMARY KEY,
           name VARCHAR(100) UNIQUE NOT NULL,
-          slug VARCHAR(100) UNIQUE NOT NULL,
           description TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -47,12 +46,12 @@ export default async function handler(req, res) {
       
       // 插入默认分类
       await pool.query(`
-        INSERT INTO categories (name, slug, description) VALUES
-        ('未分类', 'uncategorized', '默认分类，用于未指定分类的文章'),
-        ('技术', 'tech', '技术相关文章'),
-        ('生活', 'life', '生活感悟和随笔'),
-        ('学习', 'learning', '学习笔记和心得')
-        ON CONFLICT (slug) DO NOTHING
+        INSERT INTO categories (name, description) VALUES
+        ('未分类', '默认分类，用于未指定分类的文章'),
+        ('技术', '技术相关文章'),
+        ('生活', '生活感悟和随笔'),
+        ('学习', '学习笔记和心得')
+        ON CONFLICT (name) DO NOTHING
       `);
       
       await pool.query(`
@@ -151,7 +150,6 @@ export default async function handler(req, res) {
         CREATE TABLE IF NOT EXISTS categories (
           id SERIAL PRIMARY KEY,
           name VARCHAR(100) UNIQUE NOT NULL,
-          slug VARCHAR(100) UNIQUE NOT NULL,
           description TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -159,12 +157,12 @@ export default async function handler(req, res) {
       
       // 插入默认分类
       await sql`
-        INSERT INTO categories (name, slug, description) VALUES
-        ('未分类', 'uncategorized', '默认分类，用于未指定分类的文章'),
-        ('技术', 'tech', '技术相关文章'),
-        ('生活', 'life', '生活感悟和随笔'),
-        ('学习', 'learning', '学习笔记和心得')
-        ON CONFLICT (slug) DO NOTHING
+        INSERT INTO categories (name, description) VALUES
+        ('未分类', '默认分类，用于未指定分类的文章'),
+        ('技术', '技术相关文章'),
+        ('生活', '生活感悟和随笔'),
+        ('学习', '学习笔记和心得')
+        ON CONFLICT (name) DO NOTHING
       `;
       
       await sql`
@@ -266,7 +264,7 @@ export default async function handler(req, res) {
         console.log('[API] 通过 slug 获取文章', { slug });
         // 通过slug获取单篇文章
         const result = await sql`
-          SELECT p.*, c.name as category_name, c.slug as category_slug 
+          SELECT p.*, c.name as category_name 
           FROM posts p 
           LEFT JOIN categories c ON p.category_id = c.id
           WHERE p.slug = ${slug}
@@ -323,7 +321,7 @@ export default async function handler(req, res) {
         console.log('[API] 通过 id 获取文章', { id });
         // 通过id获取单篇文章
         const result = await sql`
-          SELECT p.*, c.name as category_name, c.slug as category_slug 
+          SELECT p.*, c.name as category_name 
           FROM posts p 
           LEFT JOIN categories c ON p.category_id = c.id
           WHERE p.id = ${id}
@@ -384,7 +382,7 @@ export default async function handler(req, res) {
         let result;
         if (includeDrafts) {
           result = await sql`
-            SELECT p.*, c.name as category_name, c.slug as category_slug 
+            SELECT p.*, c.name as category_name 
             FROM posts p 
             LEFT JOIN categories c ON p.category_id = c.id
             ORDER BY p.updated_at DESC
@@ -392,7 +390,7 @@ export default async function handler(req, res) {
           `;
         } else {
           result = await sql`
-            SELECT p.*, c.name as category_name, c.slug as category_slug 
+            SELECT p.*, c.name as category_name 
             FROM posts p 
             LEFT JOIN categories c ON p.category_id = c.id
             WHERE p.published = TRUE AND p.status = 'published'

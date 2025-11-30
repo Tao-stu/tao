@@ -9,18 +9,17 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 CREATE TABLE IF NOT EXISTS categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
-    slug VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 插入默认分类
-INSERT INTO categories (name, slug, description) VALUES
-('未分类', 'uncategorized', '默认分类，用于未指定分类的文章'),
-('技术', 'tech', '技术相关文章'),
-('生活', 'life', '生活感悟和随笔'),
-('学习', 'learning', '学习笔记和心得')
-ON CONFLICT (slug) DO NOTHING;
+INSERT INTO categories (name, description) VALUES
+('未分类', '默认分类，用于未指定分类的文章'),
+('技术', '技术相关文章'),
+('生活', '生活感悟和随笔'),
+('学习', '学习笔记和心得')
+ON CONFLICT (name) DO NOTHING;
 
 -- 文章表
 CREATE TABLE IF NOT EXISTS posts (
@@ -50,7 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_posts_tags ON posts USING GIN(tags);
 CREATE INDEX IF NOT EXISTS idx_posts_title_search ON posts USING GIN(to_tsvector('chinese', title));
 CREATE INDEX IF NOT EXISTS idx_posts_content_search ON posts USING GIN(to_tsvector('chinese', content));
 CREATE INDEX IF NOT EXISTS idx_posts_category_id ON posts(category_id);
-CREATE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug);
+CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(name);
 
 -- 消息表（用于联系表单）
 CREATE TABLE IF NOT EXISTS messages (
