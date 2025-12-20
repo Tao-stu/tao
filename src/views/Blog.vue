@@ -9,6 +9,19 @@
         </h1>
         <p class="text-sm md:text-base transition-colors" :class="isDark ? 'text-gray-300' : 'text-gray-600'">分享我的想法和经验</p>
         </div>
+
+          <div>
+          <a 
+            href="https://blog-8ee.pages.dev/" 
+            class="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-tokyo-night-blue/40 text-sm tracking-wide transition-all hover:scale-105 w-fit"
+            :class="isDark ? 'text-tokyo-night-cyan hover:bg-tokyo-night-bg-highlight' : 'text-blue-700 hover:bg-blue-50'"
+          >
+            个人博客
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
         
         <!-- 统计信息和刷新按钮 -->
         <div class="flex items-center gap-2 md:gap-3">
