@@ -9,7 +9,7 @@
         </h1>
         <p class="text-sm md:text-base transition-colors" :class="isDark ? 'text-gray-300' : 'text-gray-600'">分享我的想法和经验</p>
         </div>
-
+        <br>
           <div>
           <a 
             href="https://blog-8ee.pages.dev/" 
