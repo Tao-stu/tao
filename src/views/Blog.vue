@@ -10,7 +10,7 @@
         <p class="text-sm md:text-base transition-colors" :class="isDark ? 'text-gray-300' : 'text-gray-600'">分享我的想法和经验</p>
         <div class="mt-4">
           <a 
-            href="https://blog-8ee.pages.dev/" 
+            href="https://tao-blog.pages.dev/" 
             class="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-tokyo-night-blue/40 text-sm tracking-wide transition-all hover:scale-105 w-fit"
             :class="isDark ? 'text-tokyo-night-cyan hover:bg-tokyo-night-bg-highlight' : 'text-blue-700 hover:bg-blue-50'"
           >
